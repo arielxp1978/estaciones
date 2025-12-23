@@ -68,6 +68,43 @@ def parse_markdown_files(directory):
     
     return beneficios
 
+def generate_ai_summaries(beneficios):
+    """
+    Genera resúmenes estructurados (simulando IA) para ahorrar tokens en consultas futuras.
+    """
+    summaries = []
+    
+    # 1. Resumen General (Mejores Descuentos)
+    mejores = sorted(beneficios, key=lambda x: x['descuento'], reverse=True)[:5]
+    resumen_gral = "### 🚀 Mejores Ahorros de la Semana\n\n"
+    for b in mejores:
+        resumen_gral += f"- **{b['descuento']}%** en **{b['estacion']}** con **{b['banco']}** ({b['dia']}). Tope: ${b['tope']}.\n"
+    
+    summaries.append({
+        "tipo": "general",
+        "contenido": resumen_gral
+    })
+    
+    # 2. Resúmenes por Tipo de Combustible
+    combustibles = set(b['combustible'] for b in beneficios if b['combustible'] != 'Todos')
+    for fuel in combustibles:
+        f_beneficios = [b for b in beneficios if b['combustible'] == fuel or b['combustible'] == 'Todos']
+        f_mejores = sorted(f_beneficios, key=lambda x: x['descuento'], reverse=True)[:3]
+        
+        resumen_fuel = f"### ⛽ Ahorros en {fuel}\n\n"
+        if f_mejores:
+            for b in f_mejores:
+                resumen_fuel += f"- **{b['estacion']}**: {b['descuento']}% dto. con {b['banco']} ({b['dia']}).\n"
+        else:
+            resumen_fuel += "No se encontraron ofertas específicas para este combustible hoy."
+            
+        summaries.append({
+            "tipo": fuel.lower(),
+            "contenido": resumen_fuel
+        })
+        
+    return summaries
+
 def update_cloud():
     print(f"Iniciando actualización de beneficios - {datetime.datetime.now()}")
     
@@ -83,10 +120,15 @@ def update_cloud():
 
     print(f"Se encontraron {len(data)} beneficios para cargar.")
 
-    # 2. Cargar a la nube (Supabase)
-    load_to_supabase(data)
+    # 2. Cargar beneficios detallados a la nube (Supabase)
+    load_to_supabase(data, "beneficios")
     
-    # 3. Guardar copia local en JSON para auditoría
+    # 3. Generar y cargar resúmenes para el caché de IA
+    print("Generando resúmenes para el caché de IA...")
+    summaries = generate_ai_summaries(data)
+    load_to_supabase(summaries, "analisis_ia")
+    
+    # 4. Guardar copia local en JSON para auditoría
     json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ultimo_relevamiento.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
