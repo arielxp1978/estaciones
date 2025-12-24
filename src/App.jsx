@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import { 
   Moon, 
   Sun, 
@@ -65,10 +66,9 @@ const LogoArgentina = () => (
 );
 
 const App = () => {
-  // --- Acceso Seguro a Variables de Entorno (Evita errores de compilación) ---
+  // --- Acceso Seguro a Variables de Entorno ---
   const getSafeEnv = (key, fallback) => {
     try {
-      // Intento de acceso a variables de Vite/Netlify
       if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
         return import.meta.env[key];
       }
@@ -97,12 +97,10 @@ const App = () => {
   // IA y Análisis
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [brandAnalysis, setBrandAnalysis] = useState(null);
   const [isPreCalculated, setIsPreCalculated] = useState(false);
 
   const fuelOptions = ['Nafta Super', 'Nafta Premium', 'Gasoil', 'Gasoil Premium', 'GNC'];
   const locations = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Santa Fe', 'Tucumán'];
-  const apiKey = ""; 
 
   // --- Efecto para el Icono de la Página (Favicon) ---
   useEffect(() => {
@@ -168,17 +166,17 @@ const App = () => {
       });
     });
 
-    const sorted = allItems.sort((a, b) => b.descuento - a.descuento).slice(0, 10);
+    const sorted = allItems.sort((a, b) => b.descuento - a.descuento).slice(0, 12);
 
     if (sorted.length === 0) return "### Sin Beneficios\nNo se encontraron beneficios cargados para los filtros seleccionados.";
 
-    let md = `# 🏆 Mejores Descuentos de Hoy\n`;
-    md += `Análisis global de oportunidades para **${selectedFuels.join(' + ')}** en **${selectedLocation}**.\n\n`;
+    let md = `# 🏆 Panorama General de Ahorro\n`;
+    md += `Ranking actualizado para **${selectedFuels.join(' + ')}** en **${selectedLocation}**.\n\n`;
     md += `| Estación | Banco / Billetera | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
     sorted.forEach(i => {
       md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope} |\n`;
     });
-    md += `\n> ✨ **Tip de Ahorro:** Pulsa sobre el logo de una estación arriba para ver su estrategia específica.\n\n`;
+    md += `\n> ✨ **Tip de Ahorro:** Pulsa sobre un logotipo arriba para ver la estrategia de una marca específica.\n\n`;
     md += `--- \n\n ### 📊 Resumen por Estación\n`;
     
     BRAND_ORDER.forEach(b => {
@@ -221,18 +219,9 @@ const App = () => {
     setIsAiLoading(false);
   };
 
-  const handleBrandAnalysis = async () => {
-    const file = files.find(f => f.id === activeFileId);
-    if (!file) return;
-    setIsAiLoading(true);
-    setBrandAnalysis(null); 
-    setIsAiLoading(false);
-  };
-
   useEffect(() => {
     if (isAuthenticated && files.length > 0) {
       if (!activeFileId) handleMasterAnalysis();
-      else handleBrandAnalysis();
     }
   }, [activeFileId, selectedFuels, selectedLocation, files, isAuthenticated]);
 
@@ -307,7 +296,6 @@ const App = () => {
       <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
         <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-col gap-4">
           
-          {/* LÍNEA 1 */}
           <div className="flex items-center justify-between">
             <LogoSurtidorAI />
             <div className="flex items-center gap-4">
@@ -323,7 +311,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* LÍNEA 2 */}
           <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1 border-y border-slate-500/5">
             <button 
               onClick={() => setActiveFileId(null)}
@@ -342,7 +329,6 @@ const App = () => {
             ))}
           </div>
 
-          {/* LÍNEA 3 */}
           <div className="flex justify-center items-center gap-4">
             <div className="relative">
               <button onClick={() => setIsFuelMenuOpen(!isFuelMenuOpen)} className="flex items-center gap-2 px-4 py-2 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-slate-500/10 transition-all">
@@ -384,10 +370,9 @@ const App = () => {
 
       {/* CONTENIDO */}
       <main className="max-w-[1200px] mx-auto p-6 flex flex-col gap-6 pb-32">
-        
         <div className="flex justify-center">
           <button 
-            onClick={() => activeFileId ? handleBrandAnalysis() : handleMasterAnalysis()}
+            onClick={() => activeFileId ? null : handleMasterAnalysis()}
             disabled={isAiLoading}
             className="flex items-center gap-3 px-8 py-4 rounded-full font-black text-[11px] uppercase tracking-[0.1em] text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-xl shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all"
           >
@@ -408,17 +393,12 @@ const App = () => {
                       {isPreCalculated ? <CloudLightning className="text-emerald-500" size={32} /> : <Trophy className="text-blue-600" size={32} />}
                       <div>
                         <p className={`m-0 text-sm font-black uppercase italic ${isPreCalculated ? 'text-emerald-600' : 'text-blue-600'}`}>{isPreCalculated ? 'Análisis Cloud Optimizado 🚀' : 'Ranking Global en Tiempo Real ✨'}</p>
-                        <p className="m-0 text-[10px] opacity-60 font-medium tracking-tight">Panorama general generado tras el acceso.</p>
+                        <p className="m-0 text-[10px] opacity-60 font-medium tracking-tight">Información de entrada generada automáticamente.</p>
                       </div>
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: marked.parse(aiAnalysis) }} />
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-24 opacity-20 animate-pulse">
-                    <Loader2 size={48} className="animate-spin mb-4" />
-                    <p className="font-black text-[10px] uppercase tracking-widest italic">Cargando datos maestros...</p>
-                  </div>
-                )}
+                ) : <div className="text-center py-20 opacity-10 uppercase font-black tracking-widest italic">Cargando beneficios...</div>}
               </div>
             ) : (
               <div className="animate-in slide-in-from-right-10 duration-500">
@@ -441,7 +421,6 @@ const App = () => {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 10px; }
-        
         .markdown-body h1 { font-size: 2.5rem; font-weight: 950; color: #3b82f6; margin-bottom: 2rem; font-style: italic; text-transform: uppercase; line-height: 0.9; border:none; letter-spacing: -0.05em; }
         .markdown-body h2 { font-size: 1.6rem; font-weight: 800; margin-top: 2rem; margin-bottom: 1.2rem; color: #3b82f6; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.5rem; }
         .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 2rem 0; border: 1px solid #e2e8f0; border-radius: 2rem; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); }
@@ -449,7 +428,6 @@ const App = () => {
         .markdown-body th { background: rgba(59, 130, 246, 0.05); font-weight: 900; text-transform: uppercase; font-size: 0.7rem; color: #3b82f6; letter-spacing: 0.1em; }
         .markdown-body strong { color: #3b82f6; font-weight: 900; }
         .markdown-body blockquote { border-left: 8px solid #3b82f6; background: #eff6ff; padding: 1.5rem 2rem; margin: 2rem 0; border-radius: 0 2rem 2rem 0; font-style: italic; }
-        
         .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
         .dark .markdown-body table { border-color: #334155; }
         .dark .markdown-body th { background: #1e293b; color: #3b82f6; }
@@ -459,5 +437,16 @@ const App = () => {
     </div>
   );
 };
+
+// --- PUNTO DE ENTRADA INTELIGENTE ---
+const rootNode = document.getElementById('root');
+if (rootNode) {
+    // Detectamos si estamos en el Canvas para evitar el conflicto de renderizado
+    const isCanvas = typeof window !== 'undefined' && window.hasOwnProperty('__POWERED_BY_CANVAS__');
+    if (!isCanvas) {
+        const root = ReactDOM.createRoot(rootNode);
+        root.render(<App />);
+    }
+}
 
 export default App;
