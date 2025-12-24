@@ -1,0 +1,212 @@
+[
+    {
+        "estacion": "YPF",
+        "banco": "App YPF (Dinero en Cuenta)",
+        "medio_pago": "QR App YPF (Dinero en cuenta)",
+        "dia": "Lunes, Sábado y Domingo",
+        "combustible": "Infinia (Nafta/Diesel)",
+        "descuento": 10,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "App YPF (Nocturno)",
+        "medio_pago": "QR App YPF",
+        "dia": "Todos los días (00:00 a 06:00)",
+        "combustible": "Todos",
+        "descuento": 6,
+        "tope": 0,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "ACA (Automóvil Club Argentino)",
+        "medio_pago": "QR App YPF (Tarjetas asociadas)",
+        "dia": "Todos los días",
+        "combustible": "Todos",
+        "descuento": 5,
+        "tope": 0,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Santander",
+        "medio_pago": "QR App YPF (Tarjeta Visa)",
+        "dia": "Jueves",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Club La Nación",
+        "medio_pago": "QR App YPF",
+        "dia": "Todos los días",
+        "combustible": "Infinia (Nafta/Diesel)",
+        "descuento": 10,
+        "tope": 3000,
+        "vigencia": "2026-12-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "ICBC",
+        "medio_pago": "QR App YPF",
+        "dia": "Martes",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 2500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Hipotecario / Brubank",
+        "medio_pago": "MODO QR",
+        "dia": "Martes",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 2000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Shell Box",
+        "medio_pago": "QR App Shell Box",
+        "dia": "Miércoles",
+        "combustible": "V-Power (Nafta/Diesel)",
+        "descuento": 10,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Jumbo+ / Vea Ahorro",
+        "medio_pago": "App Shell Box (Canje)",
+        "dia": "Jueves",
+        "combustible": "V-Power",
+        "descuento": 10,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Tarjeta 365",
+        "medio_pago": "QR Shell Box",
+        "dia": "De Lunes a Viernes",
+        "combustible": "V-Power (Nafta/Diesel)",
+        "descuento": 5,
+        "tope": 2000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Personal Pay",
+        "medio_pago": "QR App Shell Box",
+        "dia": "Todos los días",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 2500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "ON Axion (Niveles)",
+        "medio_pago": "App ON Axion",
+        "dia": "Lunes y Viernes",
+        "combustible": "Quantium (Nafta/Diesel)",
+        "descuento": 10,
+        "tope": 2500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "BBVA",
+        "medio_pago": "MODO QR (App BBVA)",
+        "dia": "Viernes y Sábados",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 6000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "BBVA (Haberes)",
+        "medio_pago": "MODO QR (App BBVA)",
+        "dia": "Viernes y Sábados",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 9000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "HSBC",
+        "medio_pago": "Tarjeta de Crédito",
+        "dia": "Viernes",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "American Express",
+        "medio_pago": "Tarjeta de Crédito",
+        "dia": "Todos los días",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 5000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "Mercado Pago",
+        "medio_pago": "QR Mercado Pago",
+        "dia": "Primera Carga",
+        "combustible": "Todos",
+        "descuento": 1,
+        "tope": 1000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Puma Pris (App)",
+        "medio_pago": "QR App Puma Pris",
+        "dia": "Miércoles",
+        "combustible": "Todos (Súper/Premium/Diesel)",
+        "descuento": 10,
+        "tope": 50,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Puma Pris (Verano)",
+        "medio_pago": "QR App Puma Pris",
+        "dia": "Viernes",
+        "combustible": "Súper",
+        "descuento": 10,
+        "tope": 2500,
+        "vigencia": "2026-01-01"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Puma Pris (Vouchers)",
+        "medio_pago": "Canje de Puntos",
+        "dia": "Todos los días",
+        "combustible": "Todos",
+        "descuento": 0,
+        "tope": 20000,
+        "vigencia": "2026-01-01"
+    },
+    {
+        "estacion": "Gulf",
+        "banco": "Gulf (App)",
+        "medio_pago": "Canje de Puntos",
+        "dia": "Todos los días",
+        "combustible": "Todos",
+        "descuento": 0,
+        "tope": 0,
+        "vigencia": "2026-01-01"
+    }
+]
