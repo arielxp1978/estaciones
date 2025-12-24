@@ -9,16 +9,18 @@ import { marked } from 'marked';
 // Configuración de Marked para procesar tablas y saltos de línea correctamente
 marked.setOptions({ gfm: true, breaks: true });
 
-// --- Mapeo de Logos Oficiales ---
+// --- Mapeo de Logos Oficiales (Actualizados para proporcionalidad) ---
 const BRAND_LOGOS = {
   YPF: "https://th.bing.com/th/id/OIP.pzMMO-c752EHiEMR0Y8lBwHaHa?w=162&h=180&c=7&r=0&o=7&cb=ucfimg2&dpr=2&pid=1.7&rm=3&ucfimg=1",
   SHELL: "https://th.bing.com/th/id/OIP.FRpIJg9HCjYFXVpmvaPv6AHaEK?w=283&h=180&c=7&r=0&o=7&cb=ucfimg2&dpr=2&pid=1.7&rm=3&ucfimg=1",
   AXION: "https://th.bing.com/th/id/OIP.lgt-f-3gih_rIiQO3ZEQmwAAAA?w=132&h=180&c=7&r=0&o=7&cb=ucfimg2&dpr=2&pid=1.7&rm=3&ucfimg=1",
-  PUMA: "https://th.bing.com/th/id/OIP.dPCDdtc8FJy_SxCJw29bQwHaBR?w=338&h=62&c=7&r=0&o=7&cb=ucfimg2&dpr=2&pid=1.7&rm=3&ucfimg=1",
+  // Logo Puma simplificado solo al icono para evitar que se vea largo
+  PUMA: "https://th.bing.com/th/id/OIP.9fP_6qH_hV_pY8kXf2u6qQHaHa?pid=ImgDet&rs=1",
   GULF: "https://th.bing.com/th/id/OIP.Ed9ZW4u-CqgGI8EaYAUZAQHaEK?w=266&h=180&c=7&r=0&o=7&cb=ucfimg2&dpr=2&pid=1.7&rm=3&ucfimg=1"
 };
 
-const BRAND_ORDER = ['YPF', 'SHELL', 'AXION', 'PUMA', 'GULF'];
+// Orden solicitado: YPF, SHELL, PUMA, AXION, GULF
+const BRAND_ORDER = ['YPF', 'SHELL', 'PUMA', 'AXION', 'GULF'];
 const FUEL_OPTIONS = ['Nafta Super', 'Nafta Premium', 'Diesel', 'Diesel Premium', 'GNC'];
 const LOCATION_OPTIONS = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza'];
 
@@ -80,16 +82,13 @@ const App = () => {
     try { document.title = "Surtidor AI"; } catch (e) {}
   }, []);
 
-  // --- Lógica de Estandarización de Datos ---
   const standardizeData = (item) => {
     let fuel = (item.combustible || '').trim();
-    
     if (/Infinia|V-Power/i.test(fuel)) {
       fuel = "Nafta Premium y Diesel Premium";
     } else if (/Súper/i.test(fuel)) {
       fuel = "Nafta Super";
     }
-
     return {
       ...item,
       combustible_estandar: fuel,
@@ -106,16 +105,13 @@ const App = () => {
       if (data && data.length > 0) {
         const latest = new Date(Math.max(...data.map(i => new Date(i.created_at || Date.now()))));
         setLastUpdateDate(latest.toLocaleDateString('es-AR'));
-        
         const processedData = data.map(standardizeData);
-
         const grouped = processedData.reduce((acc, item) => {
           const brand = item.marca;
           if (!acc[brand]) acc[brand] = [];
           acc[brand].push(item);
           return acc;
         }, {});
-        
         const formatted = Object.keys(grouped).map(brand => ({
           id: `brand-${brand.toLowerCase()}`,
           brand,
@@ -156,7 +152,6 @@ const App = () => {
     setAiResponse(null);
   };
 
-  // --- Lógica de Filtrado y Ordenamiento Estricta (Descuento -> Tope) ---
   const sortAndFilterBeneficios = (items, fuels) => {
     return items
       .filter(item => {
@@ -170,26 +165,15 @@ const App = () => {
                  return itemFuel.includes(search) || originalFuel.includes(search);
                });
       })
-      .sort((a, b) => {
-        // 1. Ordenar por Descuento (%) descendente
-        if (b.descuento !== a.descuento) {
-          return b.descuento - a.descuento;
-        }
-        // 2. En caso de empate, ordenar por Tope ($) descendente
-        return b.tope - a.tope;
-      });
+      .sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
   };
 
-  // --- Generación de Markdown para Tablas ---
   const generateMarkdownTable = (brand, items) => {
     if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente para esta marca.`;
-    
     let md = `# Beneficios ${brand}\n\n`;
     md += `A continuación se muestran los beneficios vigentes para la marca **${brand}** filtrados por tu selección.\n\n`;
-    
     selectedFuels.forEach(fuel => {
       const sorted = sortAndFilterBeneficios(items, [fuel]);
-
       md += `## Combustible: ${fuel}\n\n`;
       if (sorted.length === 0) {
         md += `> Sin promociones vigentes para **${fuel}** en este momento.\n\n`;
@@ -212,12 +196,8 @@ const App = () => {
         allItems.push({ ...item, brand: f.brand });
       });
     });
-
-    // Ordenar ranking global por descuento y luego por tope
     const sorted = allItems.sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope)).slice(0, 15);
-    
     if (sorted.length === 0) return `### Sin Beneficios\nNo hay datos cargados para **${selectedFuels.join(', ')}**.`;
-    
     let md = `# 🏆 Ranking General de Ahorro\n\n`;
     md += `Mejores oportunidades para **${selectedFuels.join(', ')}** en **${selectedLocation}**.\n\n`;
     md += `| Marca | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
@@ -239,12 +219,10 @@ const App = () => {
     if (!geminiApiKey) { setAiResponse("⚠️ Configuración pendiente en Netlify."); return; }
     setIsAiConsulting(true);
     setAiResponse(null);
-    
     const filteredContext = files.map(f => {
         const items = sortAndFilterBeneficios(f.items, selectedFuels);
         return `MARCA ${f.brand}:\n${items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}, el ${i.dia}`).join('\n')}`;
     }).join('\n\n');
-
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
@@ -278,7 +256,6 @@ const App = () => {
         },
         body: JSON.stringify({ texto: feedbackText, calificacion: feedbackRating, interaccion_ia: !!aiResponse })
       });
-
       if (response.ok) {
         setFeedbackSent(true);
         setFeedbackText("");
@@ -337,12 +314,18 @@ const App = () => {
           {viewMode === 'app' && (
             <div className="space-y-4">
                 <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1">
-                    <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-black shadow-lg shadow-blue-600/20' : 'border-transparent opacity-40 hover:opacity-100'}`}>
-                        <Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span>
+                    <button onClick={() => setActiveFileId(null)} className={`flex flex-col items-center justify-center gap-1 p-2 min-w-[70px] rounded-2xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white shadow-lg' : 'border-transparent opacity-40'}`}>
+                        <Sparkles size={20} />
+                        <span className="text-[9px] font-black uppercase">Global</span>
                     </button>
                     {files.map(f => (
-                        <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-5 h-11 min-w-[95px] rounded-2xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-inner' : 'border-transparent opacity-40 hover:opacity-100'}`}>
-                            <img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-5 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" />
+                        <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex flex-col items-center justify-center gap-1 p-2 min-w-[70px] rounded-2xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-600/20' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                            <div className="h-8 w-12 flex items-center justify-center">
+                              <img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                            </div>
+                            <span className={`text-[9px] font-black uppercase ${activeFileId === f.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
+                              {f.brand}
+                            </span>
                         </button>
                     ))}
                 </div>
@@ -355,7 +338,7 @@ const App = () => {
                         {isFuelMenuOpen && (
                             <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {FUEL_OPTIONS.map(fuel => (
-                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/20' : 'text-slate-400 dark:text-slate-500'}`}>
+                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {fuel}
                                     </button>
                                 ))}
@@ -370,7 +353,7 @@ const App = () => {
                         {isLocMenuOpen && (
                             <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {LOCATION_OPTIONS.map(loc => (
-                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/20' : 'text-slate-400 dark:text-slate-500'}`}>
+                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {loc}
                                     </button>
                                 ))}
@@ -386,7 +369,6 @@ const App = () => {
       <main className="max-w-4xl mx-auto p-6 pb-32 flex flex-col gap-8">
         {viewMode === 'app' ? (
           <>
-            {/* ASISTENTE */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden border-4 border-white/10">
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
@@ -412,7 +394,6 @@ const App = () => {
                 <Sparkles className="absolute -bottom-10 -right-10 text-white/5 w-64 h-64 rotate-12" />
             </div>
 
-            {/* CONTENIDO PRINCIPAL: TABLA DE BENEFICIOS */}
             <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[50vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
               <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
                 <div className="markdown-body prose max-none dark:prose-invert overflow-hidden">
@@ -427,7 +408,6 @@ const App = () => {
               </div>
             </div>
 
-            {/* FEEDBACK */}
             <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-blue-50/50 border-blue-100 shadow-inner'}`}>
                 {!feedbackSent ? (
                     <div className="flex flex-col gap-6">
@@ -508,7 +488,6 @@ const App = () => {
         .dark .markdown-body strong, .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
         .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #93c5fd; }
         
-        /* Ajustes de Color para modo oscuro en el panel admin y texto secundario */
         .dark .text-slate-900 { color: #f8fafc; }
         .dark .text-slate-800 { color: #f1f5f9; }
         .dark .text-slate-700 { color: #e2e8f0; }
