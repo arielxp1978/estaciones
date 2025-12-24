@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 
-// Configuración de Marked
+// Configuración de Marked para procesar tablas y saltos de línea correctamente
 marked.setOptions({ gfm: true, breaks: true });
 
 // --- Mapeo de Logos Oficiales ---
@@ -19,13 +19,12 @@ const BRAND_LOGOS = {
 };
 
 const BRAND_ORDER = ['YPF', 'SHELL', 'AXION', 'PUMA', 'GULF'];
-
 const FUEL_OPTIONS = ['Nafta Super', 'Nafta Premium', 'Diesel', 'GNC'];
 const LOCATION_OPTIONS = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza'];
 
 const LogoSurtidorAI = ({ onClick }) => (
   <button onClick={onClick} className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
-    <div className="relative flex items-center justify-center w-10 h-10 bg-blue-600 rounded-xl shadow-lg">
+    <div className="relative flex items-center justify-center w-10 h-10 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/20">
       <Fuel className="text-white w-6 h-6" />
     </div>
     <div className="leading-none text-left">
@@ -73,7 +72,6 @@ const App = () => {
   const [selectedFuels, setSelectedFuels] = useState(['Nafta Super']);
   const [selectedLocation, setSelectedLocation] = useState('Todo el país');
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
 
   const [isFuelMenuOpen, setIsFuelMenuOpen] = useState(false);
   const [isLocMenuOpen, setIsLocMenuOpen] = useState(false);
@@ -139,71 +137,83 @@ const App = () => {
   };
 
   const sortBeneficios = (items) => {
+    // Ordenar por descuento (%) descendente y luego por tope descendente
     return [...items].sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
   };
 
-  const BenefitCards = ({ brand, items }) => {
-    const filtered = items.filter(item => 
-      (item.combustible || '').toLowerCase().includes('todos') || 
-      selectedFuels.some(f => (item.combustible || '').toLowerCase().includes(f.toLowerCase()))
-    );
-    const sorted = sortBeneficios(filtered);
+  // --- Generación de Markdown para Tablas ---
+  const generateMarkdownTable = (brand, items) => {
+    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente para esta marca.`;
+    
+    let md = `# Beneficios ${brand}\n\n`;
+    selectedFuels.forEach(fuel => {
+      let filtered = items.filter(item => 
+        (item.combustible || '').toLowerCase().includes('todos') || 
+        (item.combustible || '').toLowerCase().includes(fuel.toLowerCase())
+      );
+      
+      const sorted = sortBeneficios(filtered);
 
-    if (sorted.length === 0) return (
-      <div className="py-20 text-center opacity-30 italic font-black uppercase text-xs tracking-widest">Sin beneficios para {selectedFuels.join(', ')}</div>
-    );
+      md += `## Combustible: ${fuel}\n\n`;
+      if (sorted.length === 0) {
+        md += `> Sin promociones vigentes para **${fuel}** en este momento.\n\n`;
+      } else {
+        md += `| Banco / Billetera | Medio Pago | Día | % Desc. | Tope |\n| :--- | :--- | :--- | :--- | :--- |\n`;
+        sorted.forEach(i => {
+          md += `| **${i.banco}** | ${i.medio_pago} | ${i.dia} | **${i.descuento}%** | $${i.tope.toLocaleString()} |\n`;
+        });
+        md += `\n`;
+      }
+    });
+    return md;
+  };
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-        {sorted.map((item, idx) => (
-          <div key={idx} className="relative bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden hover:shadow-blue-500/10 transition-all duration-300">
-            <div className="absolute top-0 right-0 bg-blue-600 text-white px-5 py-2.5 rounded-bl-[1.5rem] font-black text-2xl italic shadow-lg">
-              {item.descuento}%
-            </div>
-            <div className="p-7">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="bg-slate-50 dark:bg-slate-900 p-2 rounded-xl">
-                    <img src={BRAND_LOGOS[brand]} alt={brand} className="h-4 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                    <Calendar size={10} /> {item.dia}
-                </span>
-              </div>
-              <h4 className="text-xl font-black text-slate-800 dark:text-white leading-tight mb-1">{item.banco}</h4>
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6 bg-blue-50 dark:bg-blue-900/30 inline-block px-2 py-1 rounded-lg">{item.medio_pago}</p>
-              
-              <div className="flex items-center justify-between mt-4 pt-5 border-t border-slate-50 dark:border-slate-700">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase opacity-30 leading-none mb-1">Tope máximo de reintegro</span>
-                  <span className="text-lg font-black text-slate-700 dark:text-slate-200">${item.tope.toLocaleString()}</span>
-                </div>
-                <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                  <ArrowRight size={18} className="text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const generateLocalRanking = (currentFiles = files) => {
+    const allItems = [];
+    currentFiles.forEach(f => {
+      f.items.forEach(item => {
+        const fuelMatch = (item.combustible || '').toLowerCase().includes('todos') || 
+                         selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase()));
+        if (fuelMatch) allItems.push({ ...item, brand: f.brand });
+      });
+    });
+    const sorted = sortBeneficios(allItems).slice(0, 15);
+    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados para los filtros seleccionados.";
+    
+    let md = `# 🏆 Ranking General de Ahorro\n\n`;
+    md += `A continuación se detallan las mejores opciones de ahorro ordenadas por porcentaje y tope de reintegro.\n\n`;
+    md += `| Estación | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
+    sorted.forEach(i => md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope.toLocaleString()} |\n`);
+    md += `\n--- \n\n ### 💡 Resumen por Estación\n`;
+    BRAND_ORDER.forEach(b => {
+        const data = currentFiles.find(f => f.brand === b);
+        if (data) {
+            const top = sortBeneficios(data.items.filter(item => (item.combustible || '').toLowerCase().includes('todos') || selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase()))))[0];
+            if (top) md += `* En **${b}**, la mejor opción es **${top.banco}** con un **${top.descuento}%** de reintegro.\n`;
+        }
+    });
+    return md;
   };
 
   const handleAiConsult = async () => {
     if (!userPrompt.trim()) return;
-    if (!geminiApiKey) { setAiResponse("⚠️ Configuración pendiente."); return; }
+    if (!geminiApiKey) { setAiResponse("⚠️ Configuración pendiente en Netlify."); return; }
     setIsAiConsulting(true);
     setAiResponse(null);
-    const context = files.map(f => `MARCA ${f.brand}:\n${f.items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}`).join('\n')}`).join('\n\n');
+    const context = files.map(f => `MARCA ${f.brand}:\n${f.items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}, el ${i.dia}`).join('\n')}`).join('\n\n');
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Experto en ahorro Argentina. Solo listas directas. 1. ### 🎯 Mejor Plan. 2. ### 💡 Instrucciones. 3. ### 💰 Ahorro.\n\nDatos:\n\n${context}\n\nConsulta: "${userPrompt}"` }] }]
+          contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustibles en Argentina. 
+            Responde de forma DIRECTA, utilizando tablas de Markdown cuando sea posible para comparar. 
+            Ordena siempre por % de ahorro y luego por tope.
+            Formato: 1. ### 🎯 Mejor Estrategia (Tabla). 2. ### 💡 Pasos Clave. 3. ### 💰 Ahorro Estimado.\n\nDatos:\n\n${context}\n\nConsulta: "${userPrompt}"` }] }]
         })
       });
       const data = await response.json();
-      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "Intenta de nuevo.");
+      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "No hay respuesta.");
     } catch (e) { setAiResponse("Error de IA."); }
     setIsAiConsulting(false);
   };
@@ -235,7 +245,7 @@ const App = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 text-center animate-in zoom-in-95 duration-500">
           <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8 animate-pulse"><Lock className="text-white w-10 h-10" /></div>
-          <h2 className="text-2xl font-black italic tracking-tighter mb-8 uppercase">Surtidor AI</h2>
+          <h2 className="text-2xl font-black italic tracking-tighter mb-8 uppercase text-slate-800">Surtidor AI</h2>
           <form onSubmit={handleLogin} className="space-y-4">
             <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="Contraseña..." className="w-full bg-slate-50 p-4 rounded-2xl text-center font-bold outline-none border-2 border-transparent focus:border-blue-600 transition-all shadow-inner" autoFocus />
             <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all uppercase tracking-widest text-[11px]">Entrar <ArrowRight size={16} /></button>
@@ -249,7 +259,7 @@ const App = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <LogoSurtidorAI onClick={goHome} />
@@ -259,7 +269,7 @@ const App = () => {
                     <button onClick={() => setViewMode(viewMode === 'app' ? 'admin' : 'app')} className={`p-2 rounded-lg transition-all ${viewMode === 'admin' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-blue-600'}`}>
                       {viewMode === 'app' ? <LayoutDashboard size={18} /> : <ChevronLeft size={18} />}
                     </button>
-                    <button onClick={() => setIsAuthenticated(false)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
+                    <button onClick={() => { setIsAuthenticated(false); setViewMode('app'); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
                   </div>
                 )}
                 <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">{isDarkMode ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-blue-600" />}</button>
@@ -270,7 +280,7 @@ const App = () => {
             <div className="space-y-4">
                 <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1">
                     <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-black shadow-lg shadow-blue-600/20' : 'border-transparent opacity-40 hover:opacity-100'}`}>
-                        <Sparkles size={14} /> <span className="text-[10px] uppercase">Ranking Global ✨</span>
+                        <Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span>
                     </button>
                     {files.map(f => (
                         <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-5 h-11 min-w-[95px] rounded-2xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent opacity-40 hover:opacity-100'}`}>
@@ -285,9 +295,9 @@ const App = () => {
                             <Fuel size={14} /> {selectedFuels[0]} <ChevronDown size={12} />
                         </button>
                         {isFuelMenuOpen && (
-                            <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {FUEL_OPTIONS.map(fuel => (
-                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'}`}>
+                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {fuel}
                                     </button>
                                 ))}
@@ -300,9 +310,9 @@ const App = () => {
                             <MapPin size={14} /> {selectedLocation} <ChevronDown size={12} />
                         </button>
                         {isLocMenuOpen && (
-                            <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {LOCATION_OPTIONS.map(loc => (
-                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'}`}>
+                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {loc}
                                     </button>
                                 ))}
@@ -332,90 +342,54 @@ const App = () => {
                         </button>
                     </div>
                     {aiResponse && (
-                        <div className="mt-8 bg-white/95 text-slate-900 p-7 rounded-[2rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl border-l-8 border-blue-600">
+                        <div className="mt-8 bg-white/95 text-slate-900 p-7 rounded-[2rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl border-l-8 border-blue-600 overflow-hidden">
                             <div className="flex items-center justify-between mb-5 border-b border-slate-100 pb-3">
                                 <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic flex items-center gap-2"><BadgePercent size={14}/> Estrategia IA sugerida</span>
                                 <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={16}/></button>
                             </div>
-                            <div className="markdown-body prose-sm" dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
+                            <div className="markdown-body prose-sm table-container overflow-x-auto" dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
                         </div>
                     )}
                 </div>
                 <Sparkles className="absolute -bottom-10 -right-10 text-white/5 w-64 h-64 rotate-12" />
             </div>
 
-            {/* CONTENIDO PRINCIPAL: INFOGRAFÍA / CARDS */}
-            <div className={`rounded-[2.5rem] p-8 md:p-12 shadow-2xl ${isDarkMode ? 'bg-slate-900 border border-slate-800' : 'bg-white border border-slate-100'}`}>
-              <div className="flex items-center justify-between mb-8 border-b pb-6 border-slate-50 dark:border-slate-800">
-                <div className="flex flex-col">
-                  <h2 className="text-3xl font-black italic tracking-tighter uppercase text-blue-600 leading-none">
-                    {activeBrandData ? activeBrandData.brand : "Ranking de Ahorro"}
-                  </h2>
-                  <p className="text-[10px] uppercase font-black tracking-widest opacity-30 mt-2">Basado en tu selección de combustible</p>
+            {/* CONTENIDO PRINCIPAL: TABLA DE BENEFICIOS */}
+            <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[50vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+              <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
+                <div className="markdown-body prose max-w-none dark:prose-invert overflow-hidden">
+                    <div className="table-container overflow-x-auto" dangerouslySetInnerHTML={{ 
+                        __html: marked.parse(
+                            activeFileId 
+                            ? generateMarkdownTable(activeBrandData?.brand, activeBrandData?.items) 
+                            : generateLocalRanking()
+                        ) 
+                    }} />
                 </div>
-                <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-2xl text-[9px] font-black text-blue-600 uppercase tracking-widest italic shadow-sm">
-                  <TrendingUp size={14} /> Recomendado
-                </div>
-              </div>
-
-              {activeBrandData ? (
-                <BenefitCards brand={activeBrandData.brand} items={activeBrandData.items} />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {files.flatMap(f => f.items.map(i => ({...i, brand: f.brand})))
-                    .filter(item => (item.combustible || '').toLowerCase().includes('todos') || selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase())))
-                    .sort((a,b) => b.descuento - a.descuento)
-                    .slice(0, 10)
-                    .map((item, idx) => (
-                      <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 p-7 rounded-[2rem] border-2 border-transparent hover:border-blue-600/10 transition-all group">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="bg-white dark:bg-slate-900 p-2 rounded-xl shadow-sm">
-                            <img src={BRAND_LOGOS[item.brand]} className="h-4 w-auto object-contain" alt={item.brand} />
-                          </div>
-                          <span className="text-2xl font-black text-blue-600 italic group-hover:scale-110 transition-transform">-{item.descuento}%</span>
-                        </div>
-                        <h4 className="font-black text-slate-800 dark:text-white uppercase text-sm tracking-tighter mb-1 leading-tight">{item.banco}</h4>
-                        <p className="text-[9px] font-black text-blue-500/60 uppercase tracking-widest">{item.medio_pago}</p>
-                        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          <Calendar size={12} /> {item.dia}
-                        </div>
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
-              
-              <div className="mt-12 text-center">
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-20">Última sincronización: {lastUpdateDate || '---'}</p>
               </div>
             </div>
 
             {/* FEEDBACK */}
-            <div className={`rounded-[2.5rem] border p-10 transition-all ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-blue-50/50 border-blue-100 shadow-inner'}`}>
+            <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-blue-50/50 border-blue-100 shadow-inner'}`}>
                 {!feedbackSent ? (
-                    <div className="flex flex-col gap-8">
-                        <div className="text-center md:text-left">
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-blue-600 mb-1">Tu experiencia importa</h3>
-                            <p className="text-xs font-bold opacity-40 uppercase tracking-widest">Ayúdanos a mejorar el comparador</p>
-                        </div>
-                        <div className="flex justify-center md:justify-start items-center gap-3">
+                    <div className="flex flex-col gap-6">
+                        <h3 className="text-lg font-black uppercase italic tracking-tighter text-blue-600 flex items-center gap-2"><ThumbsUp size={20} /> ¿Cómo fue tu experiencia?</h3>
+                        <div className="flex items-center gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
-                                <button key={star} onClick={() => setFeedbackRating(star)} className={`transition-all hover:scale-125 ${feedbackRating >= star ? 'text-yellow-500 drop-shadow-lg' : 'text-slate-300 dark:text-slate-700'}`}>
-                                    <Star size={36} fill={feedbackRating >= star ? "currentColor" : "none"} />
+                                <button key={star} onClick={() => setFeedbackRating(star)} className={`transition-all hover:scale-125 ${feedbackRating >= star ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                                  <Star size={32} fill={feedbackRating >= star ? "currentColor" : "none"} />
                                 </button>
                             ))}
                         </div>
-                        <textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="¿Te sirvieron los datos? ¿Algún banco que falte?" className={`w-full p-5 rounded-[1.5rem] text-sm outline-none border-2 transition-all h-28 font-medium ${isDarkMode ? 'bg-slate-900 border-slate-800 focus:border-blue-600 text-white' : 'bg-white border-slate-200 focus:border-blue-600 shadow-sm'}`} />
+                        <textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="Tu opinión ayuda a mejorar el servicio..." className={`w-full p-5 rounded-[1.5rem] text-sm outline-none border-2 transition-all h-28 font-medium ${isDarkMode ? 'bg-slate-900 border-slate-800 focus:border-blue-600 text-white' : 'bg-white border-slate-200 focus:border-blue-600 shadow-sm'}`} />
                         {feedbackError && <div className="text-red-500 text-[10px] font-black uppercase flex items-center gap-2 bg-red-50 p-3 rounded-xl"><AlertCircle size={14}/> {feedbackError}</div>}
-                        <button onClick={handleSendFeedback} disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all uppercase tracking-[0.2em] text-[11px] disabled:opacity-50">Enviar Feedback</button>
+                        <button onClick={handleSendFeedback} disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50">Enviar Feedback</button>
                     </div>
                 ) : (
-                    <div className="text-center py-10 animate-in zoom-in-95 duration-500">
-                        <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white shadow-xl shadow-emerald-500/30">
-                            <CheckCircle2 size={40} />
-                        </div>
-                        <h3 className="text-2xl font-black uppercase italic tracking-tighter text-emerald-600">¡Muchas Gracias!</h3>
-                        <button onClick={() => setFeedbackSent(false)} className="mt-6 text-[10px] uppercase font-black text-blue-600 hover:underline tracking-widest">Enviar otra opinión</button>
+                    <div className="text-center py-6 animate-in zoom-in-95 duration-500">
+                      <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-emerald-500/20"><CheckCircle2 size={32} /></div>
+                      <h3 className="text-xl font-black uppercase italic tracking-tighter text-emerald-600">¡Feedback Recibido!</h3>
+                      <button onClick={() => setFeedbackSent(false)} className="mt-4 text-[10px] uppercase font-black text-blue-600 hover:underline">Enviar otro comentario</button>
                     </div>
                 )}
             </div>
@@ -445,13 +419,27 @@ const App = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 10px; }
         
-        .markdown-body strong { color: #3b82f6; font-weight: 950; }
-        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-size: 1.1rem; font-weight: 950; color: #3b82f6; margin-bottom: 1.2rem; text-transform: uppercase; border:none; letter-spacing: -0.02em; font-style: italic; }
-        .markdown-body ul { list-style: none; padding-left: 0; }
-        .markdown-body li { padding: 1.2rem; margin-bottom: 0.8rem; background: rgba(59, 130, 246, 0.04); border-radius: 1.8rem; border-left: 5px solid #3b82f6; font-size: 0.85rem; font-weight: 600; color: #1e293b; line-height: 1.5; }
+        .table-container { width: 100%; border-radius: 1.5rem; }
+        .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.5rem 0; border: 1px solid #e2e8f0; border-radius: 1.2rem; overflow: hidden; font-size: 0.85rem; background: white; }
+        .markdown-body th, .markdown-body td { padding: 15px 20px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        .markdown-body th { background: #f8fafc; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; color: #2563eb; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        .markdown-body tr:nth-child(even) { background-color: #f9fafb; }
+        .markdown-body tr:hover { background-color: rgba(37, 99, 235, 0.03); }
+        .markdown-body tr:last-child td { border-bottom: none; }
         
-        .dark .markdown-body h1, .dark .markdown-body h2, .dark .markdown-body h3 { color: #60a5fa; }
-        .dark .markdown-body li { background: rgba(255, 255, 255, 0.03); color: #cbd5e1; }
+        .markdown-body strong { color: #2563eb; font-weight: 950; }
+        .markdown-body h1 { font-size: 2.2rem; font-weight: 950; color: #2563eb; margin-bottom: 1.5rem; text-transform: uppercase; border:none; letter-spacing: -0.05em; font-style: italic; line-height: 1; }
+        .markdown-body h2 { font-size: 1.3rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; text-transform: uppercase; }
+        .markdown-body blockquote { border-left: 6px solid #2563eb; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 1.5rem 1.5rem 0; font-style: italic; }
+        
+        /* Dark Mode: Alto Contraste */
+        .dark .markdown-body table { background: #0f172a; border-color: #334155; }
+        .dark .markdown-body th { background: #1e293b; color: #60a5fa; border-bottom-color: #334155; }
+        .dark .markdown-body td { border-bottom-color: #1e293b; color: #cbd5e1; }
+        .dark .markdown-body tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
+        .dark .markdown-body tr:hover { background-color: rgba(96, 165, 250, 0.05); }
+        .dark .markdown-body strong, .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
+        .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #cbd5e1; }
       `}</style>
     </div>
   );
