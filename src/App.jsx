@@ -65,17 +65,15 @@ const LogoArgentina = () => (
 );
 
 const App = () => {
-  // --- Acceso Seguro a Variables de Entorno (Evita errores de import.meta en Canvas) ---
+  // --- Acceso Seguro a Variables de Entorno (Evita errores de compilación) ---
   const getSafeEnv = (key, fallback) => {
     try {
-      // Intenta acceder a las variables de Vite/Netlify sin romper el compilador de Canvas
-      const env = window?.process?.env || {};
-      // Usamos una referencia indirecta para evitar que el compilador estático de Canvas falle
-      const viteEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
-      return viteEnv[key] || env[key] || fallback;
-    } catch (e) {
-      return fallback;
-    }
+      // Intento de acceso a variables de Vite/Netlify
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+        return import.meta.env[key];
+      }
+    } catch (e) {}
+    return fallback;
   };
 
   const supabaseUrl = getSafeEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
@@ -105,6 +103,16 @@ const App = () => {
   const fuelOptions = ['Nafta Super', 'Nafta Premium', 'Gasoil', 'Gasoil Premium', 'GNC'];
   const locations = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Santa Fe', 'Tucumán'];
   const apiKey = ""; 
+
+  // --- Efecto para el Icono de la Página (Favicon) ---
+  useEffect(() => {
+    try {
+      const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
+      link.rel = 'icon';
+      link.href = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><text y=%22.9em%22 font-size=%2260%22 x=%2215%22 fill=%22white%22>⛽</text></svg>';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    } catch (err) {}
+  }, []);
 
   // --- Sincronización ---
   const syncFromSupabase = async () => {
@@ -194,7 +202,6 @@ const App = () => {
     setIsAiLoading(true);
     setIsPreCalculated(false);
     
-    // 1. Intentar buscar en caché Cloud
     try {
       const typeKey = selectedFuels.length === 1 ? selectedFuels[0].toLowerCase() : 'global';
       const locKey = selectedLocation.toLowerCase();
@@ -210,7 +217,6 @@ const App = () => {
       }
     } catch (e) {}
 
-    // 2. Fallback: Ranking Local
     setAiAnalysis(generateLocalRanking());
     setIsAiLoading(false);
   };
@@ -223,7 +229,6 @@ const App = () => {
     setIsAiLoading(false);
   };
 
-  // Efecto principal para refrescar el contenido al cambiar filtros o auth
   useEffect(() => {
     if (isAuthenticated && files.length > 0) {
       if (!activeFileId) handleMasterAnalysis();
