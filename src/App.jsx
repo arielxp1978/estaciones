@@ -23,8 +23,8 @@ const FUEL_OPTIONS = ['Nafta Super', 'Nafta Premium', 'Diesel', 'Diesel Premium'
 const LOCATION_OPTIONS = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza'];
 
 const LogoSurtidorAI = ({ onClick }) => (
-  <button onClick={onClick} className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
-    <div className="relative flex items-center justify-center w-10 h-10 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/20">
+  <button onClick={onClick} className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity focus:outline-none">
+    <div className="relative flex items-center justify-center w-10 h-10 bg-blue-600 rounded-xl shadow-lg">
       <Fuel className="text-white w-6 h-6" />
     </div>
     <div className="leading-none text-left">
@@ -84,7 +84,6 @@ const App = () => {
   const standardizeData = (item) => {
     let fuel = (item.combustible || '').trim();
     
-    // Normalización de nombres comerciales a categorías estándar
     if (/Infinia|V-Power/i.test(fuel)) {
       fuel = "Nafta Premium y Diesel Premium";
     } else if (/Súper/i.test(fuel)) {
@@ -94,7 +93,7 @@ const App = () => {
     return {
       ...item,
       combustible_estandar: fuel,
-      marca: (item.estacion || 'Otros').toUpperCase() // Mapeamos 'estacion' a 'marca' internamente
+      marca: (item.estacion || 'Otros').toUpperCase()
     };
   };
 
@@ -108,7 +107,6 @@ const App = () => {
         const latest = new Date(Math.max(...data.map(i => new Date(i.created_at || Date.now()))));
         setLastUpdateDate(latest.toLocaleDateString('es-AR'));
         
-        // Procesamos y estandarizamos cada item
         const processedData = data.map(standardizeData);
 
         const grouped = processedData.reduce((acc, item) => {
@@ -158,24 +156,28 @@ const App = () => {
     setAiResponse(null);
   };
 
-  // --- Lógica de Filtrado y Ordenamiento Estricta ---
+  // --- Lógica de Filtrado y Ordenamiento Estricta (Descuento -> Tope) ---
   const sortAndFilterBeneficios = (items, fuels) => {
     return items
       .filter(item => {
         const itemFuel = (item.combustible_estandar || '').toLowerCase();
         const originalFuel = (item.combustible || '').toLowerCase();
-        
-        // Permitir si el combustible estandarizado coincide, o si el original coincide, o si es "todos"
         return itemFuel.includes('todos') || 
                originalFuel.includes('todos') ||
                fuels.some(f => {
                  const search = f.toLowerCase();
-                 // Caso especial: Premium busca en el string estandarizado de Premium
                  if (search.includes('premium') && itemFuel.includes('premium')) return true;
                  return itemFuel.includes(search) || originalFuel.includes(search);
                });
       })
-      .sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
+      .sort((a, b) => {
+        // 1. Ordenar por Descuento (%) descendente
+        if (b.descuento !== a.descuento) {
+          return b.descuento - a.descuento;
+        }
+        // 2. En caso de empate, ordenar por Tope ($) descendente
+        return b.tope - a.tope;
+      });
   };
 
   // --- Generación de Markdown para Tablas ---
@@ -211,6 +213,7 @@ const App = () => {
       });
     });
 
+    // Ordenar ranking global por descuento y luego por tope
     const sorted = allItems.sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope)).slice(0, 15);
     
     if (sorted.length === 0) return `### Sin Beneficios\nNo hay datos cargados para **${selectedFuels.join(', ')}**.`;
@@ -250,8 +253,7 @@ const App = () => {
           contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustibles en Argentina. 
             CONTEXTO: El usuario busca "${selectedFuels.join(', ')}" en "${selectedLocation}".
             REGLA CRÍTICA: Responde con un breve resumen y una tabla comparativa de beneficios. 
-            USA SIEMPRE LAS MARCAS: YPF, Shell, Axion, Puma, Gulf.
-            Ordena por % de ahorro descendente.
+            Ordena por % de ahorro descendente y luego por tope.
             Datos estandarizados:\n\n${filteredContext}\n\nConsulta del usuario: "${userPrompt}"` }] }]
         })
       });
@@ -328,7 +330,7 @@ const App = () => {
                     <button onClick={() => { setIsAuthenticated(false); setViewMode('app'); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
                   </div>
                 )}
-                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">{isDarkMode ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-blue-600" />}</button>
+                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors focus:outline-none">{isDarkMode ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-blue-600" />}</button>
             </div>
           </div>
           
@@ -339,7 +341,7 @@ const App = () => {
                         <Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span>
                     </button>
                     {files.map(f => (
-                        <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-5 h-11 min-w-[95px] rounded-2xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                        <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-5 h-11 min-w-[95px] rounded-2xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-inner' : 'border-transparent opacity-40 hover:opacity-100'}`}>
                             <img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-5 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" />
                         </button>
                     ))}
@@ -347,13 +349,13 @@ const App = () => {
 
                 <div className="flex justify-center gap-3">
                     <div className="relative">
-                        <button onClick={() => { setIsFuelMenuOpen(!isFuelMenuOpen); setIsLocMenuOpen(false); }} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors">
+                        <button onClick={() => { setIsFuelMenuOpen(!isFuelMenuOpen); setIsLocMenuOpen(false); }} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors">
                             <Fuel size={14} /> {selectedFuels[0]} <ChevronDown size={12} />
                         </button>
                         {isFuelMenuOpen && (
                             <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {FUEL_OPTIONS.map(fuel => (
-                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/20' : 'text-slate-400 dark:text-slate-500'}`}>
                                         {fuel}
                                     </button>
                                 ))}
@@ -362,13 +364,13 @@ const App = () => {
                     </div>
 
                     <div className="relative">
-                        <button onClick={() => { setIsLocMenuOpen(!isLocMenuOpen); setIsFuelMenuOpen(false); }} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors">
+                        <button onClick={() => { setIsLocMenuOpen(!isLocMenuOpen); setIsFuelMenuOpen(false); }} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors">
                             <MapPin size={14} /> {selectedLocation} <ChevronDown size={12} />
                         </button>
                         {isLocMenuOpen && (
                             <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {LOCATION_OPTIONS.map(loc => (
-                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/20' : 'text-slate-400 dark:text-slate-500'}`}>
                                         {loc}
                                     </button>
                                 ))}
@@ -393,7 +395,7 @@ const App = () => {
                     </div>
                     <div className="flex flex-col gap-3">
                         <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder={`Ej: ¿Qué promo hay hoy para ${selectedFuels[0]}?`} className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm outline-none focus:bg-white/20 transition-all resize-none h-24 text-white placeholder:text-white/30 font-medium" />
-                        <button onClick={handleAiConsult} disabled={isAiConsulting || !userPrompt.trim()} className="w-full bg-white text-blue-600 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 shadow-xl shadow-blue-900/20">
+                        <button onClick={handleAiConsult} disabled={isAiConsulting || !userPrompt.trim()} className="w-full bg-white text-blue-600 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 shadow-xl shadow-blue-900/30 focus:outline-none">
                             {isAiConsulting ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />} Armar Plan Personalizado
                         </button>
                     </div>
@@ -401,7 +403,7 @@ const App = () => {
                         <div className="mt-8 bg-white/95 text-slate-900 p-7 rounded-[2rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl border-l-8 border-blue-600 overflow-hidden">
                             <div className="flex items-center justify-between mb-5 border-b border-slate-100 pb-3">
                                 <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic flex items-center gap-2"><BadgePercent size={14}/> Estrategia IA sugerida</span>
-                                <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={16}/></button>
+                                <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors focus:outline-none"><X size={16}/></button>
                             </div>
                             <div className="markdown-body prose-sm table-container overflow-x-auto" dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
                         </div>
@@ -432,7 +434,7 @@ const App = () => {
                         <h3 className="text-lg font-black uppercase italic tracking-tighter text-blue-600 flex items-center gap-2"><ThumbsUp size={20} /> ¿Cómo fue tu experiencia?</h3>
                         <div className="flex items-center gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
-                                <button key={star} onClick={() => setFeedbackRating(star)} className={`transition-all hover:scale-125 ${feedbackRating >= star ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                                <button key={star} onClick={() => setFeedbackRating(star)} className={`transition-all hover:scale-125 focus:outline-none ${feedbackRating >= star ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-700'}`}>
                                   <Star size={32} fill={feedbackRating >= star ? "currentColor" : "none"} />
                                 </button>
                             ))}
@@ -445,13 +447,13 @@ const App = () => {
                           </div>
                         )}
 
-                        <button onClick={handleSendFeedback} disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50">Enviar Feedback</button>
+                        <button onClick={handleSendFeedback} disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 focus:outline-none">Enviar Feedback</button>
                     </div>
                 ) : (
                     <div className="text-center py-6 animate-in zoom-in-95 duration-500">
                       <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-emerald-500/20"><CheckCircle2 size={32} /></div>
                       <h3 className="text-xl font-black uppercase italic tracking-tighter text-emerald-600">¡Feedback Recibido!</h3>
-                      <button onClick={() => setFeedbackSent(false)} className="mt-4 text-[10px] uppercase font-black text-blue-600 hover:underline">Enviar otro comentario</button>
+                      <button onClick={() => setFeedbackSent(false)} className="mt-4 text-[10px] uppercase font-black text-blue-600 hover:underline focus:outline-none">Enviar otro comentario</button>
                     </div>
                 )}
             </div>
@@ -464,7 +466,9 @@ const App = () => {
                 {allFeedback.map((item) => (
                   <div key={item.id} className="bg-white dark:bg-slate-900 rounded-[2rem] p-7 border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/10">
                     <div className="flex items-center justify-between mb-4">
-                        <div className="flex gap-1">{[1,2,3,4,5].map(s => <Star key={s} size={14} fill={item.calificacion >= s ? "#eab308" : "none"} className={item.calificacion >= s ? "text-yellow-500" : "text-slate-200 dark:text-slate-800"} />)}</div>
+                        <div className="flex gap-1">
+                            {[1,2,3,4,5].map(s => <Star key={s} size={14} fill={item.calificacion >= s ? "#eab308" : "none"} className={item.calificacion >= s ? "text-yellow-500" : "text-slate-200 dark:text-slate-800"} />)}
+                        </div>
                         <span className="text-[9px] font-black opacity-30 uppercase italic">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
                     <p className="text-sm font-medium leading-relaxed italic text-slate-700 dark:text-slate-300">"{item.texto}"</p>
@@ -495,7 +499,7 @@ const App = () => {
         .markdown-body h2 { font-size: 1.4rem; font-weight: 950; margin-top: 2rem; margin-bottom: 1rem; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; text-transform: uppercase; }
         .markdown-body blockquote { border-left: 6px solid #2563eb; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 1.5rem 1.5rem 0; font-style: italic; color: #1e40af; }
         
-        /* Dark Mode: Alto Contraste */
+        /* Dark Mode: Alto Contraste Mejorado */
         .dark .markdown-body table { background: #0f172a; border-color: #334155; }
         .dark .markdown-body th { background: #1e293b; color: #60a5fa; border-bottom-color: #334155; }
         .dark .markdown-body td { border-bottom-color: #1e293b; color: #e2e8f0; }
@@ -503,6 +507,12 @@ const App = () => {
         .dark .markdown-body tr:hover { background-color: rgba(96, 165, 250, 0.05); }
         .dark .markdown-body strong, .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
         .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #93c5fd; }
+        
+        /* Ajustes de Color para modo oscuro en el panel admin y texto secundario */
+        .dark .text-slate-900 { color: #f8fafc; }
+        .dark .text-slate-800 { color: #f1f5f9; }
+        .dark .text-slate-700 { color: #e2e8f0; }
+        .dark .bg-slate-100 { background-color: #1e293b; }
       `}</style>
     </div>
   );
