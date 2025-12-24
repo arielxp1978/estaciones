@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
   Moon, Sun, CheckCircle2, Sparkles, Loader2, Fuel, CloudLightning, 
-  Calendar, Lock, ArrowRight, Trophy, MessageSquare, X, Send 
+  Calendar, Lock, ArrowRight, Trophy, MessageSquare, X, Send, ThumbsUp, Star
 } from 'lucide-react';
 import { marked } from 'marked';
 
@@ -35,10 +35,8 @@ const LogoSurtidorAI = () => (
 
 const App = () => {
   // --- Acceso Seguro a Variables de Entorno ---
-  // Utilizamos una función para evitar el error de análisis estático en entornos antiguos
   const getEnvVar = (key, fallback) => {
     try {
-      // Intento de acceso a import.meta.env
       const env = (import.meta && import.meta.env) ? import.meta.env : {};
       return env[key] || fallback;
     } catch (e) {
@@ -63,6 +61,12 @@ const App = () => {
   const [userPrompt, setUserPrompt] = useState("");
   const [aiResponse, setAiResponse] = useState(null);
   const [isAiConsulting, setIsAiConsulting] = useState(false);
+
+  // Feedback del Usuario
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   // Filtros y Análisis
   const [selectedFuels, setSelectedFuels] = useState(['Nafta Super']);
@@ -178,7 +182,7 @@ const App = () => {
   const handleAiConsult = async () => {
     if (!userPrompt.trim()) return;
     if (!geminiApiKey) {
-        setAiResponse("⚠️ **Clave no detectada:** Por favor, asegúrate de añadir la variable `VITE_GEMINI_API_KEY_` en Netlify (como Plain Text).");
+        setAiResponse("⚠️ **Clave no detectada:** Por favor, añade la variable `VITE_GEMINI_API_KEY_` en Netlify (como Plain Text).");
         return;
     }
     setIsAiConsulting(true);
@@ -202,6 +206,37 @@ const App = () => {
     setIsAiConsulting(false);
   };
 
+  // --- Lógica de Envío de Comentarios a Supabase ---
+  const handleSendFeedback = async () => {
+    if (!feedbackText.trim() || feedbackRating === 0) return;
+    setIsSendingFeedback(true);
+    try {
+      // Intentamos insertar en una tabla 'comentarios'. Asegúrate de crearla en Supabase con columnas: texto (text) y calificacion (int)
+      const response = await fetch(`${supabaseUrl}/rest/v1/comentarios`, {
+        method: 'POST',
+        headers: { 
+          'apikey': supabaseKey, 
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ 
+          texto: feedbackText, 
+          calificacion: feedbackRating,
+          interaccion_ia: !!aiResponse
+        })
+      });
+      if (response.ok) {
+        setFeedbackSent(true);
+        setFeedbackText("");
+        setFeedbackRating(0);
+      }
+    } catch (e) {
+      console.error("Error enviando feedback:", e);
+    }
+    setIsSendingFeedback(false);
+  };
+
   const handleMasterAnalysis = async () => {
     if (files.length === 0) return;
     setIsAiLoading(true);
@@ -220,7 +255,7 @@ const App = () => {
 
   useEffect(() => {
     if (isAuthenticated && files.length > 0 && !activeFileId) handleMasterAnalysis();
-  }, [isAuthenticated, files, activeFileId, selectedFuels]);
+  }, [isAuthenticated, files, activeFileId]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -297,10 +332,10 @@ const App = () => {
         </div>
 
         {/* CONTENIDO PRINCIPAL */}
-        <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[60vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+        <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[50vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
           <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
             {isAiLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando...</p></div>
+              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando panorama...</p></div>
             ) : (
               <div className="markdown-body prose max-w-none dark:prose-invert">
                 <div dangerouslySetInnerHTML={{ 
@@ -313,6 +348,60 @@ const App = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* SECCIÓN DE FEEDBACK (OPCIÓN PARA ANALÍTICA SEMANAL) */}
+        <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-blue-50/50 border-blue-100'}`}>
+            {!feedbackSent ? (
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-blue-600">
+                            <ThumbsUp size={20} />
+                            <h3 className="text-lg font-black uppercase italic tracking-tighter">¿Cómo fue tu experiencia?</h3>
+                        </div>
+                        <p className="text-xs opacity-60 font-medium">Tus comentarios nos ayudan a que la IA aprenda qué beneficios te interesan más.</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button 
+                                key={star} 
+                                onClick={() => setFeedbackRating(star)}
+                                className={`transition-all hover:scale-110 ${feedbackRating >= star ? 'text-yellow-500' : 'text-slate-300 dark:text-slate-700'}`}
+                            >
+                                <Star size={28} fill={feedbackRating >= star ? "currentColor" : "none"} />
+                            </button>
+                        ))}
+                        <span className="text-[10px] font-black uppercase ml-2 opacity-40">{feedbackRating > 0 ? `${feedbackRating} / 5` : 'Califica el servicio'}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <textarea 
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="Cuéntanos si te sirvió el plan o qué banco nos falta agregar..."
+                            className={`w-full p-4 rounded-2xl text-sm font-medium outline-none border-2 transition-all resize-none h-24 ${isDarkMode ? 'bg-slate-900 border-slate-800 focus:border-blue-600 text-white' : 'bg-white border-slate-200 focus:border-blue-600'}`}
+                        />
+                        <button 
+                            onClick={handleSendFeedback}
+                            disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all uppercase tracking-widest text-[11px]"
+                        >
+                            {isSendingFeedback ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                            Enviar Comentario
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-6 animate-in zoom-in-95 duration-500">
+                    <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-emerald-500/20">
+                        <CheckCircle2 size={32} />
+                    </div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-emerald-600">¡Gracias por tu aporte!</h3>
+                    <p className="text-sm opacity-60 font-medium">Analizaremos tu mensaje para mejorar el servicio esta semana.</p>
+                    <button onClick={() => setFeedbackSent(false)} className="mt-6 text-[10px] font-black uppercase text-blue-600 hover:underline">Enviar otro comentario</button>
+                </div>
+            )}
         </div>
       </main>
 
