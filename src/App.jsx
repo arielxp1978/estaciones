@@ -19,7 +19,7 @@ const BRAND_LOGOS = {
 };
 
 const BRAND_ORDER = ['YPF', 'SHELL', 'AXION', 'PUMA', 'GULF'];
-const FUEL_OPTIONS = ['Nafta Super', 'Nafta Premium', 'Diesel', 'GNC'];
+const FUEL_OPTIONS = ['Nafta Super', 'Nafta Premium', 'Diesel', 'Diesel Premium', 'GNC'];
 const LOCATION_OPTIONS = ['Todo el país', 'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza'];
 
 const LogoSurtidorAI = ({ onClick }) => (
@@ -136,9 +136,15 @@ const App = () => {
     setAiResponse(null);
   };
 
-  const sortBeneficios = (items) => {
-    // Ordenar por descuento (%) descendente y luego por tope descendente
-    return [...items].sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
+  // --- Lógica de Filtrado y Ordenamiento Estricta ---
+  const sortAndFilterBeneficios = (items, fuels) => {
+    return items
+      .filter(item => {
+        const itemFuel = (item.combustible || '').toLowerCase();
+        // Mostrar si es "todos" o si contiene el combustible seleccionado
+        return itemFuel.includes('todos') || fuels.some(f => itemFuel.includes(f.toLowerCase()));
+      })
+      .sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
   };
 
   // --- Generación de Markdown para Tablas ---
@@ -146,15 +152,10 @@ const App = () => {
     if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente para esta marca.`;
     
     let md = `# Beneficios ${brand}\n\n`;
-    md += `A continuación se muestran los beneficios vigentes para **${brand}**, ordenados por conveniencia.\n\n`;
+    md += `A continuación se muestran los beneficios vigentes para **${brand}** filtrados por tu selección.\n\n`;
     
     selectedFuels.forEach(fuel => {
-      let filtered = items.filter(item => 
-        (item.combustible || '').toLowerCase().includes('todos') || 
-        (item.combustible || '').toLowerCase().includes(fuel.toLowerCase())
-      );
-      
-      const sorted = sortBeneficios(filtered);
+      const sorted = sortAndFilterBeneficios(items, [fuel]);
 
       md += `## Combustible: ${fuel}\n\n`;
       if (sorted.length === 0) {
@@ -173,24 +174,31 @@ const App = () => {
   const generateLocalRanking = (currentFiles = files) => {
     const allItems = [];
     currentFiles.forEach(f => {
-      f.items.forEach(item => {
-        const fuelMatch = (item.combustible || '').toLowerCase().includes('todos') || 
-                         selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase()));
-        if (fuelMatch) allItems.push({ ...item, brand: f.brand });
+      // Filtrar items por el combustible seleccionado antes de agregar al ranking
+      const fuelFiltered = f.items.filter(item => {
+        const itemFuel = (item.combustible || '').toLowerCase();
+        return itemFuel.includes('todos') || selectedFuels.some(sf => itemFuel.includes(sf.toLowerCase()));
+      });
+
+      fuelFiltered.forEach(item => {
+        allItems.push({ ...item, brand: f.brand });
       });
     });
-    const sorted = sortBeneficios(allItems).slice(0, 15);
-    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados para los filtros seleccionados.";
+
+    const sorted = allItems.sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope)).slice(0, 15);
+    
+    if (sorted.length === 0) return `### Sin Beneficios\nNo hay datos cargados para **${selectedFuels.join(', ')}**.`;
     
     let md = `# 🏆 Ranking General de Ahorro\n\n`;
-    md += `Este es el resumen de las mejores oportunidades de ahorro para **${selectedFuels.join(', ')}**, priorizando el mayor porcentaje de descuento y tope de reintegro.\n\n`;
+    md += `Mejores oportunidades para **${selectedFuels.join(', ')}** en **${selectedLocation}**.\n\n`;
     md += `| Estación | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
     sorted.forEach(i => md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope.toLocaleString()} |\n`);
     md += `\n--- \n\n ### 💡 Resumen por Estación\n`;
     BRAND_ORDER.forEach(b => {
         const data = currentFiles.find(f => f.brand === b);
         if (data) {
-            const top = sortBeneficios(data.items.filter(item => (item.combustible || '').toLowerCase().includes('todos') || selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase()))))[0];
+            const brandSorted = sortAndFilterBeneficios(data.items, selectedFuels);
+            const top = brandSorted[0];
             if (top) md += `* En **${b}**, la mejor opción es **${top.banco}** con un **${top.descuento}%** de reintegro.\n`;
         }
     });
@@ -202,16 +210,22 @@ const App = () => {
     if (!geminiApiKey) { setAiResponse("⚠️ Configuración pendiente en Netlify."); return; }
     setIsAiConsulting(true);
     setAiResponse(null);
-    const context = files.map(f => `MARCA ${f.brand}:\n${f.items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}, el ${i.dia}`).join('\n')}`).join('\n\n');
+    // Enviamos el contexto ya filtrado por combustible para que la IA no se confunda
+    const filteredContext = files.map(f => {
+        const items = sortAndFilterBeneficios(f.items, selectedFuels);
+        return `MARCA ${f.brand}:\n${items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}, el ${i.dia}`).join('\n')}`;
+    }).join('\n\n');
+
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustibles en Argentina. 
-            REGLA CRÍTICA: Presenta siempre un resumen escrito seguido de una tabla de Markdown comparativa. 
-            Ordena los beneficios estrictamente por porcentaje de ahorro (%) y luego por tope de reintegro.
-            Formato: 1. ### 🎯 Mejor Estrategia (Resumen y Tabla). 2. ### 💡 Pasos Clave. 3. ### 💰 Ahorro Estimado.\n\nDatos:\n\n${context}\n\nConsulta: "${userPrompt}"` }] }]
+            CONTEXTO: El usuario está buscando para "${selectedFuels.join(', ')}" en "${selectedLocation}".
+            REGLA CRÍTICA: Presenta siempre un resumen escrito seguido de una tabla comparativa. 
+            Ordena por % de ahorro.
+            Datos:\n\n${filteredContext}\n\nConsulta del usuario: "${userPrompt}"` }] }]
         })
       });
       const data = await response.json();
@@ -231,13 +245,9 @@ const App = () => {
           'apikey': supabaseKey, 
           'Authorization': `Bearer ${supabaseKey}`, 
           'Content-Type': 'application/json',
-          'Prefer': 'return=representation' // Para obtener la respuesta completa en caso de error
+          'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ 
-          texto: feedbackText, 
-          calificacion: feedbackRating, 
-          interaccion_ia: !!aiResponse 
-        })
+        body: JSON.stringify({ texto: feedbackText, calificacion: feedbackRating, interaccion_ia: !!aiResponse })
       });
 
       if (response.ok) {
@@ -249,9 +259,7 @@ const App = () => {
         const errorData = await response.json().catch(() => ({}));
         setFeedbackError(errorData.message || `Error ${response.status}: No se pudo guardar.`);
       }
-    } catch (e) {
-      setFeedbackError("Error de conexión. Verifica Supabase.");
-    }
+    } catch (e) { setFeedbackError("Error de conexión. Verifica Supabase."); }
     setIsSendingFeedback(false);
   };
 
@@ -357,8 +365,8 @@ const App = () => {
                         <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Asistente de Ahorro</h3>
                     </div>
                     <div className="flex flex-col gap-3">
-                        <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder="Ej: Tengo Banco Nación y uso Modo..." className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm outline-none focus:bg-white/20 transition-all resize-none h-24 text-white placeholder:text-white/30 font-medium" />
-                        <button onClick={handleAiConsult} disabled={isAiConsulting || !userPrompt.trim()} className="w-full bg-white text-blue-600 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 shadow-xl shadow-blue-900/30">
+                        <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder={`Ej: Busco el mejor ahorro para ${selectedFuels[0]}...`} className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm outline-none focus:bg-white/20 transition-all resize-none h-24 text-white placeholder:text-white/30 font-medium" />
+                        <button onClick={handleAiConsult} disabled={isAiConsulting || !userPrompt.trim()} className="w-full bg-white text-blue-600 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 shadow-xl shadow-blue-900/20">
                             {isAiConsulting ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />} Armar Plan Personalizado
                         </button>
                     </div>
@@ -378,7 +386,7 @@ const App = () => {
             {/* CONTENIDO PRINCIPAL: TABLA DE BENEFICIOS */}
             <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[50vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
               <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
-                <div className="markdown-body prose max-w-none dark:prose-invert overflow-hidden">
+                <div className="markdown-body prose max-none dark:prose-invert overflow-hidden">
                     <div className="table-container overflow-x-auto" dangerouslySetInnerHTML={{ 
                         __html: marked.parse(
                             activeFileId 
