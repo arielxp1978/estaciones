@@ -4,6 +4,21 @@ import datetime
 import re
 from supabase_loader import load_to_supabase
 
+def standardize_fuel_names(original_name):
+    """
+    Estandariza los nombres de combustibles según el pedido del usuario.
+    """
+    name = original_name.lower()
+    # Casos de Nafta Premium y Diesel Premium
+    if "infinia" in name or "v-power" in name:
+        return "Nafta Premium y Diesel Premium"
+    
+    # Otros casos comunes (puedes agregar más aquí)
+    if "súper" in name or "super" in name:
+        return "Nafta Súper"
+        
+    return original_name
+
 def parse_markdown_files(directory):
     """
     Lee los archivos .md y extrae la información de las tablas.
@@ -15,9 +30,9 @@ def parse_markdown_files(directory):
     for filename in os.listdir(directory):
         match = file_pattern.match(filename)
         if match:
-            estacion = match.group(1).capitalize()
+            marca = match.group(1).capitalize()
             # Tratar 'Ypf' como 'YPF'
-            if estacion == "Ypf": estacion = "YPF"
+            if marca == "Ypf": marca = "YPF"
             
             filepath = os.path.join(directory, filename)
             with open(filepath, "r", encoding="utf-8") as f:
@@ -33,6 +48,9 @@ def parse_markdown_files(directory):
                             try:
                                 # Limpiar asteriscos de negrita si existen
                                 banco = cols[1].replace("**", "")
+                                
+                                # Estandarizar combustible
+                                combustible = standardize_fuel_names(cols[4])
                                 
                                 # Extraer solo el número del descuento (ej: "10%" -> 10)
                                 desc_str = re.search(r"(\d+)", cols[5])
@@ -55,11 +73,11 @@ def parse_markdown_files(directory):
                                         vigencia = "2026-01-01" # Default safety
 
                                 beneficios.append({
-                                    "estacion": estacion,
+                                    "marca": marca,
                                     "banco": banco,
                                     "medio_pago": cols[2],
                                     "dia": cols[3],
-                                    "combustible": cols[4],
+                                    "combustible": combustible,
                                     "descuento": descuento,
                                     "tope": tope,
                                     "vigencia": vigencia
@@ -79,7 +97,7 @@ def generate_ai_summaries(beneficios):
     mejores = sorted(beneficios, key=lambda x: x['descuento'], reverse=True)[:5]
     resumen_gral = "### 🚀 Mejores Ahorros de la Semana\n\n"
     for b in mejores:
-        resumen_gral += f"- **{b['descuento']}%** en **{b['estacion']}** con **{b['banco']}** ({b['dia']}). Tope: ${b['tope']}.\n"
+        resumen_gral += f"- **{b['descuento']}%** en **{b['marca']}** con **{b['banco']}** ({b['dia']}). Tope: ${b['tope']}.\n"
     
     summaries.append({
         "tipo": "general",
@@ -95,7 +113,7 @@ def generate_ai_summaries(beneficios):
         resumen_fuel = f"### ⛽ Ahorros en {fuel}\n\n"
         if f_mejores:
             for b in f_mejores:
-                resumen_fuel += f"- **{b['estacion']}**: {b['descuento']}% dto. con {b['banco']} ({b['dia']}).\n"
+                resumen_fuel += f"- **{b['marca']}**: {b['descuento']}% dto. con {b['banco']} ({b['dia']}).\n"
         else:
             resumen_fuel += "No se encontraron ofertas específicas para este combustible hoy."
             

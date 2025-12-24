@@ -34,11 +34,11 @@ El sistema recibirá un JSON con la siguiente estructura por cada registro:
 | :--- | :--- | :--- | :--- |
 | `id` | int8 | Identificador único del beneficio. | `125` |
 | `created_at` | timestamp | Fecha/hora en que se cargó el dato. | `2025-12-23T14:00:00Z` |
-| `estacion` | text | Marca de la gasolinera. | `Shell`, `Axion`, `YPF` |
+| `marca` | text | Petrolera (YPF, Shell, etc.). | `YPF`, `Shell`, `Axion` |
 | `banco` | text | Entidad que otorga el beneficio. | `Banco Nación`, `Galicia` |
 | `medio_pago` | text | Cómo se debe pagar para obtenerlo. | `MODO QR`, `App YPF` |
 | `dia` | text | Días de vigencia del descuento. | `Lunes`, `Viernes a Domingo` |
-| `combustible` | text | Tipo de combustible aplicable. | `Infinia`, `Súper`, `Todos` |
+| `combustible` | text | Tipo de combustible aplicable. | `Nafta Premium y Diesel Premium`, `Nafta Súper` |
 | `descuento` | int4 | Porcentaje de descuento (sin símbolo %). | `30` |
 | `tope` | int4 | Tope de reintegro en pesos. | `15000` |
 | `vigencia` | date | Fecha de expiración del beneficio. | `2026-01-31` |
@@ -50,8 +50,8 @@ Para ahorrar tokens en tu sistema de consulta, te recomendamos consultar primero
 
 ### Tipos de Análisis Disponibles:
 - `general`: Los 5 mejores descuentos de todas las estaciones.
-- `nafta premium`: Resumen específico para cargas premium.
-- `gasoil`: Resumen específico para diesel.
+- `nafta premium y diesel premium`: Resumen específico para cargas premium.
+- `nafta súper`: Resumen específico para nafta común.
 
 **Ejemplo de Consulta (Filtro por Tipo):**
 `...?tipo=eq.general&select=contenido`
@@ -88,15 +88,15 @@ beneficios = response.json()
 print(f"Se encontraron {len(beneficios)} beneficios.")
 ```
 
-## 5. Ejemplo de Respuesta (JSON)
+## 6. Ejemplo de Respuesta (JSON)
 ```json
 [
   {
-    "estacion": "Shell",
+    "marca": "Shell",
     "banco": "Banco Nación",
     "medio_pago": "MODO QR",
     "dia": "Viernes a Domingo",
-    "combustible": "Todos",
+    "combustible": "Nafta Premium y Diesel Premium",
     "descuento": 30,
     "tope": 15000,
     "vigencia": "2026-01-31"
