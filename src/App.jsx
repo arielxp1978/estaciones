@@ -227,12 +227,31 @@ const App = () => {
     try {
       const response = await fetch(`${supabaseUrl}/rest/v1/comentarios`, {
         method: 'POST',
-        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ texto: feedbackText, calificacion: feedbackRating, interaccion_ia: !!aiResponse })
+        headers: { 
+          'apikey': supabaseKey, 
+          'Authorization': `Bearer ${supabaseKey}`, 
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation' // Para obtener la respuesta completa en caso de error
+        },
+        body: JSON.stringify({ 
+          texto: feedbackText, 
+          calificacion: feedbackRating, 
+          interaccion_ia: !!aiResponse 
+        })
       });
-      if (response.ok) { setFeedbackSent(true); setFeedbackText(""); setFeedbackRating(0); }
-      else { const e = await response.json(); setFeedbackError(e.message || "Error al enviar."); }
-    } catch (e) { setFeedbackError("Error de red."); }
+
+      if (response.ok) {
+        setFeedbackSent(true);
+        setFeedbackText("");
+        setFeedbackRating(0);
+        setFeedbackError(null);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setFeedbackError(errorData.message || `Error ${response.status}: No se pudo guardar.`);
+      }
+    } catch (e) {
+      setFeedbackError("Error de conexión. Verifica Supabase.");
+    }
     setIsSendingFeedback(false);
   };
 
@@ -299,7 +318,7 @@ const App = () => {
                         {isFuelMenuOpen && (
                             <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {FUEL_OPTIONS.map(fuel => (
-                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50 dark:bg-blue-600' : 'text-slate-400'}`}>
+                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {fuel}
                                     </button>
                                 ))}
@@ -314,7 +333,7 @@ const App = () => {
                         {isLocMenuOpen && (
                             <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {LOCATION_OPTIONS.map(loc => (
-                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50 dark:bg-blue-600' : 'text-slate-400'}`}>
+                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
                                         {loc}
                                     </button>
                                 ))}
@@ -384,7 +403,13 @@ const App = () => {
                             ))}
                         </div>
                         <textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="Tu opinión ayuda a mejorar el servicio..." className={`w-full p-5 rounded-[1.5rem] text-sm outline-none border-2 transition-all h-28 font-medium ${isDarkMode ? 'bg-slate-900 border-slate-800 focus:border-blue-600 text-white' : 'bg-white border-slate-200 focus:border-blue-600 shadow-sm'}`} />
-                        {feedbackError && <div className="text-red-500 text-[10px] font-black uppercase flex items-center gap-2 bg-red-50 p-3 rounded-xl"><AlertCircle size={14}/> {feedbackError}</div>}
+                        
+                        {feedbackError && (
+                          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 animate-in slide-in-from-top-2 border border-red-200">
+                            <AlertCircle size={14}/> {feedbackError}
+                          </div>
+                        )}
+
                         <button onClick={handleSendFeedback} disabled={isSendingFeedback || !feedbackText.trim() || feedbackRating === 0} className="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50">Enviar Feedback</button>
                     </div>
                 ) : (
