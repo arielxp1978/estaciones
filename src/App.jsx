@@ -35,7 +35,7 @@ const LogoSurtidorAI = () => (
 
 const App = () => {
   // --- Acceso Seguro a Variables de Entorno ---
-  const getEnvVar = (key, fallback) => {
+  const getEnvVar = (key, fallback = "") => {
     try {
       const env = (import.meta && import.meta.env) ? import.meta.env : {};
       return env[key] || fallback;
@@ -195,7 +195,17 @@ const App = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Eres un asesor experto en ahorro de combustible en Argentina. Datos actuales:\n\n${context}\n\nUsuario dice: "${userPrompt}". Crea un plan de carga semanal optimizado para él indicando días, bancos y estaciones. Responde en Markdown.` }] }]
+          contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustible en Argentina.
+            REGLAS CRÍTICAS:
+            1. Sé extremadamente DIRECTO y CONCISO.
+            2. NO uses introducciones de cortesía ni saludos largos.
+            3. Responde PRIORIZANDO TABLAS.
+            4. Usa el siguiente formato estrictamente:
+               - ### 🎯 Plan de Acción (Tabla con: Estación, Día, Banco/App, % Desc, Tope, Operación Sugerida).
+               - ### 💡 Pasos Clave (Máximo 3 bullets cortos).
+               - ### 💰 Ahorro Total Estimado.
+            
+            Datos actuales para procesar:\n\n${context}\n\nUsuario consulta: "${userPrompt}".` }] }]
         })
       });
       const data = await response.json();
@@ -211,7 +221,6 @@ const App = () => {
     if (!feedbackText.trim() || feedbackRating === 0) return;
     setIsSendingFeedback(true);
     try {
-      // Intentamos insertar en una tabla 'comentarios'. Asegúrate de crearla en Supabase con columnas: texto (text) y calificacion (int)
       const response = await fetch(`${supabaseUrl}/rest/v1/comentarios`, {
         method: 'POST',
         headers: { 
@@ -350,7 +359,7 @@ const App = () => {
           </div>
         </div>
 
-        {/* SECCIÓN DE FEEDBACK (OPCIÓN PARA ANALÍTICA SEMANAL) */}
+        {/* SECCIÓN DE FEEDBACK */}
         <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-blue-50/50 border-blue-100'}`}>
             {!feedbackSent ? (
                 <div className="flex flex-col gap-6">
