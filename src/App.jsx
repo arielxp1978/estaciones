@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import { 
   Moon, 
   Sun, 
@@ -64,15 +65,27 @@ const LogoArgentina = () => (
 );
 
 const App = () => {
-  // --- Credenciales de Supabase (Compatibles con Canvas) ---
-  const supabaseUrl = "https://dodhhkrhiuphfwxdekqu.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0";
+  // --- Credenciales de Supabase (Lógica para Netlify + Fallback para Canvas) ---
+  const getEnv = (key, fallback) => {
+    try {
+      // Intenta acceder a import.meta.env de Vite
+      return import.meta.env[key] || fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+
+  const supabaseUrl = getEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = getEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = getEnv('VITE_APP_PASSWORD', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeFileId, setActiveFileId] = useState(null);
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [passwordInput, setPasswordInput] = useState('');
   
   // Filtros
   const [selectedFuels, setSelectedFuels] = useState(['Nafta Super']);
@@ -128,8 +141,15 @@ const App = () => {
   };
 
   useEffect(() => {
+    if (appPassword) setIsAuthenticated(false);
     syncFromSupabase();
   }, []);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (passwordInput === appPassword) setIsAuthenticated(true);
+    else alert("Contraseña incorrecta");
+  };
 
   // --- Análisis Inteligente ---
   const callGemini = async (prompt, systemInstruction = "") => {
@@ -149,7 +169,7 @@ const App = () => {
       return data.candidates?.[0]?.content?.parts?.[0]?.text;
     } catch (error) {
       setIsAiLoading(false);
-      return "Análisis inteligente no disponible sin API Key.";
+      return null;
     }
   };
 
@@ -157,7 +177,6 @@ const App = () => {
     setIsAiLoading(true);
     setIsPreCalculated(false);
     
-    // Búsqueda en caché
     try {
       const typeKey = selectedFuels.length === 1 ? selectedFuels[0].toLowerCase() : 'global';
       const locKey = selectedLocation.toLowerCase();
@@ -192,11 +211,11 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (files.length > 0) {
+    if (files.length > 0 && isAuthenticated) {
       if (!activeFileId) handleMasterAnalysis();
       else handleBrandAnalysis();
     }
-  }, [activeFileId, selectedFuels, selectedLocation, files]);
+  }, [activeFileId, selectedFuels, selectedLocation, files, isAuthenticated]);
 
   // --- Helpers de Tablas ---
   const filterItems = (items, fuels) => {
@@ -232,6 +251,33 @@ const App = () => {
     }
   };
 
+  // --- Muro de Contraseña ---
+  if (!isAuthenticated && appPassword) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 text-center">
+          <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8">
+            <Lock className="text-white w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-black italic tracking-tighter mb-2 uppercase">Surtidor AI</h2>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input 
+              type="password" 
+              value={passwordInput} 
+              onChange={(e) => setPasswordInput(e.target.value)} 
+              placeholder="Contraseña..." 
+              className="w-full bg-slate-50 p-4 rounded-2xl text-center text-sm font-bold outline-none border-2 border-transparent focus:border-blue-600 transition-all" 
+              autoFocus 
+            />
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all uppercase tracking-widest text-[11px]">
+              Entrar <ArrowRight size={16} />
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
       
@@ -246,7 +292,7 @@ const App = () => {
               {lastUpdateDate && (
                 <div className="hidden sm:flex items-center gap-2 bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10">
                   <Calendar size={14} className="text-blue-600" />
-                  <span className="text-[10px] font-black text-blue-600 uppercase italic">SINCRO: {lastUpdateDate}</span>
+                  <span className="text-[10px] font-black text-blue-600 uppercase italic leading-none">SINCRO: {lastUpdateDate}</span>
                 </div>
               )}
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">
@@ -283,7 +329,7 @@ const App = () => {
                 <ChevronDown size={14} className={`transition-transform ${isFuelMenuOpen ? 'rotate-180' : ''}`} />
               </button>
               {isFuelMenuOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50">
                   {fuelOptions.map(f => (
                     <button key={f} onClick={() => toggleFuelSelection(f)} className={`w-full text-left p-2.5 rounded-lg text-[10px] font-bold flex items-center justify-between mb-1 ${selectedFuels.includes(f) ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                       {f} {selectedFuels.includes(f) && <CheckCircle2 size={12}/>}
@@ -301,7 +347,7 @@ const App = () => {
                 <ChevronDown size={14} className={`transition-transform ${isLocMenuOpen ? 'rotate-180' : ''}`} />
               </button>
               {isLocMenuOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50">
                    {locations.map(l => (
                      <button key={l} onClick={() => {setSelectedLocation(l); setIsLocMenuOpen(false);}} className={`w-full text-left p-2.5 rounded-lg text-[10px] font-bold mb-1 ${selectedLocation === l ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                        {l}
@@ -344,7 +390,7 @@ const App = () => {
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: marked.parse(aiAnalysis) }} />
                   </div>
-                ) : <div className="text-center py-20 opacity-10 uppercase font-black tracking-widest italic">Cargando inteligencia de ahorro...</div>}
+                ) : <div className="text-center py-20 opacity-10 uppercase font-black tracking-widest italic">Cargando beneficios...</div>}
               </div>
             ) : (
               <div className="animate-in slide-in-from-right-10 duration-500">
@@ -387,5 +433,9 @@ const App = () => {
     </div>
   );
 };
+
+// --- PUNTO DE ENTRADA (MANDATORIO PARA SOLUCIONAR PANTALLA EN BLANCO) ---
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 
 export default App;
