@@ -28,29 +28,29 @@ const LogoSurtidorAI = () => (
     </div>
     <div className="leading-none">
       <h1 className="font-black text-lg italic tracking-tighter dark:text-white uppercase leading-none">SURTIDOR</h1>
-      <p className="text-blue-600 font-black text-[10px] leading-none uppercase tracking-widest">AI</p>
+      <p className="text-blue-600 font-black text-[10px] leading-none tracking-widest uppercase">AI</p>
     </div>
   </div>
 );
 
 const App = () => {
-  // --- Función de acceso seguro a variables para evitar errores de import.meta en el compilador ---
-  const getEnvVar = (key, fallback = "") => {
+  // --- Acceso Seguro a Variables de Entorno (Evita advertencias de import.meta en el Canvas) ---
+  const safeGetEnv = (key, fallback) => {
     try {
-      // Intento de acceso dinámico para que el compilador no detecte import.meta estáticamente
-      const meta = (new Function("return import.meta.env"))();
-      return meta[key] || fallback;
+      // Uso de una referencia indirecta para evitar que el compilador estático falle
+      const env = (window?.process?.env) || {};
+      // @ts-ignore
+      const metaEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+      return metaEnv[key] || env[key] || fallback;
     } catch (e) {
-      // Fallback manual si el objeto no existe (común en previsualización local)
-      const processEnv = typeof process !== 'undefined' ? process.env : {};
-      return processEnv[key] || fallback;
+      return fallback;
     }
   };
 
-  const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
-  const supabaseKey = getEnvVar('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
-  const appPassword = getEnvVar('VITE_APP_PASSWORD', "");
-  const geminiApiKey = getEnvVar('VITE_GEMINI_API_KEY', "");
+  const supabaseUrl = safeGetEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = safeGetEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = safeGetEnv('VITE_APP_PASSWORD', "");
+  const geminiApiKey = safeGetEnv('VITE_GEMINI_API_KEY', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
@@ -72,7 +72,7 @@ const App = () => {
 
   useEffect(() => {
     try {
-      document.title = "Surtidor AI - Comparador";
+      document.title = "Surtidor AI";
       const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
       link.rel = 'icon';
       link.href = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><text y=%22.9em%22 font-size=%2260%22 x=%2215%22 fill=%22white%22>⛽</text></svg>';
@@ -95,7 +95,8 @@ const App = () => {
           acc[brand].push(item);
           return acc;
         }, {});
-        setFiles(Object.keys(grouped).map(brand => ({
+        
+        const formatted = Object.keys(grouped).map(brand => ({
           id: `brand-${brand.toLowerCase()}`,
           brand,
           items: grouped[brand]
@@ -103,7 +104,8 @@ const App = () => {
             const idxA = BRAND_ORDER.indexOf(a.brand);
             const idxB = BRAND_ORDER.indexOf(b.brand);
             return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-        }));
+        });
+        setFiles(formatted);
       }
     } catch (err) {}
   };
@@ -116,7 +118,8 @@ const App = () => {
   };
 
   const generateMarkdownTable = (brand, items) => {
-    if (!items) return "# Sin Datos";
+    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios cargados actualmente para esta marca.`;
+    
     let md = `# Beneficios ${brand}\n\n`;
     selectedFuels.forEach(fuel => {
       let filtered = items.filter(item => 
@@ -128,7 +131,7 @@ const App = () => {
 
       md += `## Combustible: ${fuel}\n\n`;
       if (sorted.length === 0) {
-        md += `> Sin promociones vigentes para **${fuel}** actualmente.\n\n`;
+        md += `> Sin promociones vigentes para **${fuel}** en este momento.\n\n`;
       } else {
         md += `| Banco / Billetera | Medio Pago | Día | % Desc. | Tope |\n| :--- | :--- | :--- | :--- | :--- |\n`;
         sorted.forEach(i => {
@@ -150,10 +153,10 @@ const App = () => {
       });
     });
     const sorted = sortBeneficios(allItems).slice(0, 12);
-    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados.";
+    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos disponibles para los filtros seleccionados.";
     
     let md = `# 🏆 Panorama General de Ahorro\n\n`;
-    md += `A continuación las mejores opciones para maximizar tu carga hoy.\n\n`;
+    md += `Aquí tienes el ranking de las mejores oportunidades para maximizar tu carga hoy.\n\n`;
     md += `| Estación | Banco | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
     sorted.forEach(i => md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope} |\n`);
     md += `\n--- \n\n ### 💡 Resumen por Estación\n`;
@@ -161,17 +164,18 @@ const App = () => {
         const data = currentFiles.find(f => f.brand === b);
         if (data) {
             const top = sortBeneficios(data.items)[0];
-            if (top) md += `* En **${b}**, el mejor descuento es del **${top.descuento}%** con ${top.banco}.\n`;
+            if (top) md += `* En **${b}**, la mejor opción es **${top.banco}** con un **${top.descuento}%** de reintegro.\n`;
         }
     });
+    md += `\n> ✨ **Tip:** Pulsa sobre los logotipos en la parte superior para ver el detalle de cada empresa.`;
     return md;
   };
 
-  // --- Consulta al Asistente Gemini ---
+  // --- Asistente Gemini ---
   const handleAiConsult = async () => {
     if (!userPrompt.trim()) return;
     if (!geminiApiKey) {
-        setAiResponse("⚠️ **Configuración Pendiente:** Por favor, ve a Netlify y añade la variable `VITE_GEMINI_API_KEY` con tu clave de Google AI Studio.");
+        setAiResponse("⚠️ **Clave no configurada:** No se detectó la clave de Gemini. Asegúrate de añadir `VITE_GEMINI_API_KEY` en Netlify (como Secret Value) y realizar un despliegue.");
         return;
     }
     setIsAiConsulting(true);
@@ -184,13 +188,13 @@ const App = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Eres un experto en ahorro de combustibles en Argentina. Dados estos datos:\n\n${context}\n\nEl usuario dice: "${userPrompt}". Crea un plan de carga semanal optimizado para él basándote exclusivamente en los beneficios listados. Indica día, banco, estación y cuánto puede ahorrar aproximadamente. Responde en Markdown.` }] }]
+          contents: [{ parts: [{ text: `Eres un asesor experto en ahorro de combustible en Argentina. Datos actuales:\n\n${context}\n\nEl usuario dice: "${userPrompt}". Crea un plan de carga optimizado para él indicando días, bancos y estaciones. Responde en Markdown.` }] }]
         })
       });
       const data = await response.json();
-      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "La IA no pudo procesar tu pedido.");
+      setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "No pude procesar la respuesta.");
     } catch (e) {
-      setAiResponse("Error al conectar con el asistente.");
+      setAiResponse("Hubo un error al conectar con el Asistente IA.");
     }
     setIsAiConsulting(false);
   };
@@ -212,7 +216,7 @@ const App = () => {
 
   useEffect(() => {
     if (isAuthenticated && files.length > 0 && !activeFileId) handleMasterAnalysis();
-  }, [isAuthenticated, files, activeFileId]);
+  }, [isAuthenticated, files, activeFileId, selectedFuels]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -222,7 +226,7 @@ const App = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
         <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 text-center">
           <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8 animate-pulse"><Lock className="text-white w-10 h-10" /></div>
           <h2 className="text-2xl font-black italic tracking-tighter mb-6 uppercase">Surtidor AI</h2>
@@ -239,16 +243,16 @@ const App = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <LogoSurtidorAI />
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">{isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}</button>
           </div>
           <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1">
-            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg shadow-blue-600/20' : 'border-transparent opacity-50 hover:opacity-100'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black tracking-widest">Global ✨</span></button>
+            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg' : 'border-transparent opacity-50'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span></button>
             {files.map(f => (
-              <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-4 h-10 min-w-[90px] rounded-xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-600/5' : 'border-transparent opacity-40 hover:opacity-100'}`}><img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-6 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" /></button>
+              <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-4 h-10 min-w-[90px] rounded-xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-600/5' : 'border-transparent opacity-40'}`}><img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-6 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" /></button>
             ))}
           </div>
         </div>
@@ -261,9 +265,9 @@ const App = () => {
             <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md"><MessageSquare size={20} /></div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Asistente Inteligente</h3>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Asistente de Ahorro</h3>
                 </div>
-                <p className="text-blue-100 text-sm mb-6 leading-relaxed opacity-90">Escriba aquí qué bancos, tarjetas y billeteras tiene para indicarle sus mejores opciones.</p>
+                <p className="text-blue-100 text-sm mb-6 leading-relaxed opacity-90">Escribe qué bancos o billeteras virtuales tienes (ej. Santander, Modo, Cuenta DNI) y te daré las mejores opciones.</p>
                 <div className="flex flex-col gap-3">
                     <textarea 
                         value={userPrompt}
@@ -276,9 +280,9 @@ const App = () => {
                     </button>
                 </div>
                 {aiResponse && (
-                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl animate-in slide-in-from-top-4 duration-500 shadow-xl prose prose-sm max-w-none">
+                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl shadow-xl prose prose-sm max-w-none">
                         <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
-                            <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic">Plan Sugerido ✨</span>
+                            <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic">Tu Plan Sugerido ✨</span>
                             <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={16}/></button>
                         </div>
                         <div dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
@@ -292,10 +296,16 @@ const App = () => {
         <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[60vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
           <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
             {isAiLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Actualizando información...</p></div>
+              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando panorama...</p></div>
             ) : (
               <div className="markdown-body prose max-w-none dark:prose-invert">
-                <div dangerouslySetInnerHTML={{ __html: marked.parse(activeBrandData ? generateMarkdownTable(activeBrandData.brand, activeBrandData.items) : aiAnalysis || "Cargando...") }} />
+                <div dangerouslySetInnerHTML={{ 
+                    __html: marked.parse(
+                        activeBrandData 
+                        ? generateMarkdownTable(activeBrandData.brand, activeBrandData.items) 
+                        : aiAnalysis || "Cargando..."
+                    ) 
+                }} />
               </div>
             )}
           </div>
@@ -306,6 +316,7 @@ const App = () => {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 10px; }
+        
         .markdown-body h1 { font-size: 2.2rem; font-weight: 950; color: #3b82f6; margin-bottom: 2rem; font-style: italic; text-transform: uppercase; line-height: 1; border:none; letter-spacing: -0.05em; }
         .markdown-body h2 { font-size: 1.4rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 1rem; color: #3b82f6; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.5rem; }
         .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.5rem 0; border: 1px solid #e2e8f0; border-radius: 2rem; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); font-size: 0.85rem; }
@@ -313,6 +324,7 @@ const App = () => {
         .markdown-body th { background: rgba(59, 130, 246, 0.05); font-weight: 900; text-transform: uppercase; font-size: 0.65rem; color: #3b82f6; letter-spacing: 0.05em; }
         .markdown-body strong { color: #3b82f6; font-weight: 900; }
         .markdown-body blockquote { border-left: 6px solid #3b82f6; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 2rem 2rem 0; font-style: italic; }
+        
         .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
         .dark .markdown-body table { border-color: #334155; }
         .dark .markdown-body th { background: #1e293b; color: #3b82f6; }
@@ -332,7 +344,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const isGoogleCanvas = window.location.hostname.includes('goog') || window.hasOwnProperty('__POWERED_BY_CANVAS__');
     if (!isGoogleCanvas) {
       if (!rootElement.hasChildNodes()) {
-        ReactDOM.createRoot(rootElement).render(<App />);
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
       }
     }
   }
