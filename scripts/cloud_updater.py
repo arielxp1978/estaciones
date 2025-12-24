@@ -120,7 +120,19 @@ def update_cloud():
 
     print(f"Se encontraron {len(data)} beneficios para cargar.")
 
+    # 1.5. Ejecutar Motor de Verificación (NUEVO)
+    try:
+        from verification_engine import run_verification
+        print("Corriendo motor de verificación secundaria...")
+        run_verification()
+    except ImportError:
+        print("Motor de verificación no encontrado, saltando...")
+
     # 2. Cargar beneficios detallados a la nube (Supabase)
+    # Plan de almacenamiento y caché:
+    # - **SUPABASE**: Base de datos accesible vía API.
+    # - **AI CACHE**: Tabla `analisis_ia` para guardar resúmenes pre-procesados y ahorrar tokens.
+    # - **DOUBLE VERIFICATION**: Motor que escanea directamente links bancarios de alta prioridad.
     load_to_supabase(data, "beneficios")
     
     # 3. Generar y cargar resúmenes para el caché de IA

@@ -10,6 +10,8 @@ A continuación se presenta el relevamiento detallado de los beneficios vigentes
 | **Banco Nación (BNA+)** | MODO QR (App BNA+) | Viernes, Sábado y Domingo | Todos | 30% | $5.000 (mensual) | $16.667 | 01/01 al 31/01 | El tope de $5.000 es por cliente por mes. |
 | **Banco Macro / BMA** | MODO QR (Tarjetas Visa) | Miércoles | Todos | 20% | $3.000 (mensual) | $15.000 | 01/01 al 31/01 | Clientes generales. Tarjetas de crédito Visa. |
 | **Banco Macro / BMA (Selecta)** | MODO QR (Visa Platinum/Black) | Miércoles | Todos | 30% | $5.000 (mensual) | $16.667 | 01/01 al 31/01 | Exclusivo segmento Selecta. |
+| Banco Macro (Selecta) | MODO (App Macro/App YPF) | Miércoles | Todos | 30% | $25.000 | $83.333 | 31/01/2026* | Sujeto a renovación (Diciembre confirmado) |
+| Banco Macro (General) | MODO (App Macro/App YPF) | Miércoles | Todos | 20% | $25.000 | $125.000 | 31/01/2026* | Sujeto a renovación (Diciembre confirmado) |
 | **Banco Galicia** | MODO QR (Mastercard) | Lunes | Todos | 15% | $3.000 (mensual) | $20.000 | 01/01 al 31/01 | Exclusivo para clientes que cobren haberes en el banco. |
 | **Banco Galicia (Éminent)** | MODO QR (Mastercard) | Lunes | Todos | 15% | $5.000 (mensual) | $33.333 | 01/01 al 31/01 | Exclusivo segmento Éminent. |
 | **Banco Comafi** | MODO QR (App Comafi) | Sábados | Todos | 15% | $3.500 (mensual) | $23.333 | 01/01 al 31/01 | Clientes generales con tarjeta de crédito. |
