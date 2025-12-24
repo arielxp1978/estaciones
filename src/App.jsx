@@ -28,7 +28,7 @@ const LogoSurtidorAI = ({ onClick }) => (
       <Fuel className="text-white w-6 h-6" />
     </div>
     <div className="leading-none text-left">
-      <h1 className="font-black text-lg italic tracking-tighter dark:text-white uppercase leading-none text-slate-800">SURTIDOR</h1>
+      <h1 className="font-black text-lg italic tracking-tighter dark:text-white uppercase leading-none text-slate-900">SURTIDOR</h1>
       <p className="text-blue-600 font-black text-[10px] leading-none tracking-widest uppercase">AI</p>
     </div>
   </button>
@@ -146,6 +146,8 @@ const App = () => {
     if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente para esta marca.`;
     
     let md = `# Beneficios ${brand}\n\n`;
+    md += `A continuación se muestran los beneficios vigentes para **${brand}**, ordenados por conveniencia.\n\n`;
+    
     selectedFuels.forEach(fuel => {
       let filtered = items.filter(item => 
         (item.combustible || '').toLowerCase().includes('todos') || 
@@ -181,7 +183,7 @@ const App = () => {
     if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados para los filtros seleccionados.";
     
     let md = `# 🏆 Ranking General de Ahorro\n\n`;
-    md += `A continuación se detallan las mejores opciones de ahorro ordenadas por porcentaje y tope de reintegro.\n\n`;
+    md += `Este es el resumen de las mejores oportunidades de ahorro para **${selectedFuels.join(', ')}**, priorizando el mayor porcentaje de descuento y tope de reintegro.\n\n`;
     md += `| Estación | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
     sorted.forEach(i => md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope.toLocaleString()} |\n`);
     md += `\n--- \n\n ### 💡 Resumen por Estación\n`;
@@ -207,9 +209,9 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustibles en Argentina. 
-            Responde de forma DIRECTA, utilizando tablas de Markdown cuando sea posible para comparar. 
-            Ordena siempre por % de ahorro y luego por tope.
-            Formato: 1. ### 🎯 Mejor Estrategia (Tabla). 2. ### 💡 Pasos Clave. 3. ### 💰 Ahorro Estimado.\n\nDatos:\n\n${context}\n\nConsulta: "${userPrompt}"` }] }]
+            REGLA CRÍTICA: Presenta siempre un resumen escrito seguido de una tabla de Markdown comparativa. 
+            Ordena los beneficios estrictamente por porcentaje de ahorro (%) y luego por tope de reintegro.
+            Formato: 1. ### 🎯 Mejor Estrategia (Resumen y Tabla). 2. ### 💡 Pasos Clave. 3. ### 💰 Ahorro Estimado.\n\nDatos:\n\n${context}\n\nConsulta: "${userPrompt}"` }] }]
         })
       });
       const data = await response.json();
@@ -259,7 +261,7 @@ const App = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800 shadow-xl' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <LogoSurtidorAI onClick={goHome} />
@@ -297,7 +299,7 @@ const App = () => {
                         {isFuelMenuOpen && (
                             <div className="absolute top-full mt-2 left-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {FUEL_OPTIONS.map(fuel => (
-                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+                                    <button key={fuel} onClick={() => { setSelectedFuels([fuel]); setIsFuelMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedFuels.includes(fuel) ? 'text-blue-600 bg-blue-50 dark:bg-blue-600' : 'text-slate-400'}`}>
                                         {fuel}
                                     </button>
                                 ))}
@@ -312,7 +314,7 @@ const App = () => {
                         {isLocMenuOpen && (
                             <div className="absolute top-full mt-2 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                                 {LOCATION_OPTIONS.map(loc => (
-                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+                                    <button key={loc} onClick={() => { setSelectedLocation(loc); setIsLocMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/30 ${selectedLocation === loc ? 'text-blue-600 bg-blue-50 dark:bg-blue-600' : 'text-slate-400'}`}>
                                         {loc}
                                     </button>
                                 ))}
@@ -422,24 +424,25 @@ const App = () => {
         .table-container { width: 100%; border-radius: 1.5rem; }
         .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.5rem 0; border: 1px solid #e2e8f0; border-radius: 1.2rem; overflow: hidden; font-size: 0.85rem; background: white; }
         .markdown-body th, .markdown-body td { padding: 15px 20px; text-align: left; border-bottom: 1px solid #f1f5f9; }
-        .markdown-body th { background: #f8fafc; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; color: #2563eb; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        .markdown-body th { background: #f8fafc; font-weight: 950; text-transform: uppercase; font-size: 0.7rem; color: #2563eb; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        .markdown-body td { color: #334155; font-weight: 500; }
         .markdown-body tr:nth-child(even) { background-color: #f9fafb; }
         .markdown-body tr:hover { background-color: rgba(37, 99, 235, 0.03); }
         .markdown-body tr:last-child td { border-bottom: none; }
         
         .markdown-body strong { color: #2563eb; font-weight: 950; }
         .markdown-body h1 { font-size: 2.2rem; font-weight: 950; color: #2563eb; margin-bottom: 1.5rem; text-transform: uppercase; border:none; letter-spacing: -0.05em; font-style: italic; line-height: 1; }
-        .markdown-body h2 { font-size: 1.3rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; text-transform: uppercase; }
-        .markdown-body blockquote { border-left: 6px solid #2563eb; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 1.5rem 1.5rem 0; font-style: italic; }
+        .markdown-body h2 { font-size: 1.4rem; font-weight: 950; margin-top: 2rem; margin-bottom: 1rem; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; text-transform: uppercase; }
+        .markdown-body blockquote { border-left: 6px solid #2563eb; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 1.5rem 1.5rem 0; font-style: italic; color: #1e40af; }
         
         /* Dark Mode: Alto Contraste */
         .dark .markdown-body table { background: #0f172a; border-color: #334155; }
         .dark .markdown-body th { background: #1e293b; color: #60a5fa; border-bottom-color: #334155; }
-        .dark .markdown-body td { border-bottom-color: #1e293b; color: #cbd5e1; }
+        .dark .markdown-body td { border-bottom-color: #1e293b; color: #e2e8f0; }
         .dark .markdown-body tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
         .dark .markdown-body tr:hover { background-color: rgba(96, 165, 250, 0.05); }
         .dark .markdown-body strong, .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
-        .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #cbd5e1; }
+        .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #93c5fd; }
       `}</style>
     </div>
   );
