@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 
-// Configuración de Marked
+// Configuración de Marked para procesar tablas y saltos de línea
 marked.setOptions({ gfm: true, breaks: true });
 
 // --- Mapeo de Logos Oficiales ---
@@ -35,19 +35,19 @@ const LogoSurtidorAI = () => (
 
 const App = () => {
   // --- Acceso Seguro a Variables de Entorno ---
-  const getEnvVar = (key, fallback = "") => {
+  const getSafeEnv = (key, fallback = "") => {
     try {
-      const env = (import.meta && import.meta.env) ? import.meta.env : {};
+      const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
       return env[key] || fallback;
     } catch (e) {
       return fallback;
     }
   };
 
-  const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
-  const supabaseKey = getEnvVar('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
-  const appPassword = getEnvVar('VITE_APP_PASSWORD', "");
-  const geminiApiKey = getEnvVar('VITE_GEMINI_API_KEY_', "");
+  const supabaseUrl = getSafeEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = getSafeEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = getSafeEnv('VITE_APP_PASSWORD', "");
+  const geminiApiKey = getSafeEnv('VITE_GEMINI_API_KEY_', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
@@ -328,12 +328,12 @@ const App = () => {
                     </button>
                 </div>
                 {aiResponse && (
-                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl animate-in slide-in-from-top-4 duration-500 shadow-xl prose prose-sm max-w-none">
+                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl animate-in slide-in-from-top-4 duration-500 shadow-xl prose prose-sm max-w-none overflow-hidden">
                         <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                             <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic leading-none">Plan Sugerido ✨</span>
                             <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={16}/></button>
                         </div>
-                        <div dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
+                        <div className="table-responsive" dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
                     </div>
                 )}
             </div>
@@ -346,8 +346,8 @@ const App = () => {
             {isAiLoading ? (
               <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando panorama...</p></div>
             ) : (
-              <div className="markdown-body prose max-w-none dark:prose-invert">
-                <div dangerouslySetInnerHTML={{ 
+              <div className="markdown-body prose max-w-none dark:prose-invert overflow-hidden">
+                <div className="table-responsive" dangerouslySetInnerHTML={{ 
                     __html: marked.parse(
                         activeBrandData 
                         ? generateMarkdownTable(activeBrandData.brand, activeBrandData.items) 
@@ -419,18 +419,29 @@ const App = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 10px; }
         
+        /* Mejoras Visuales para el Canvas */
         .markdown-body h1 { font-size: 2.2rem; font-weight: 950; color: #3b82f6; margin-bottom: 2rem; font-style: italic; text-transform: uppercase; line-height: 1; border:none; letter-spacing: -0.05em; }
         .markdown-body h2 { font-size: 1.4rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 1rem; color: #3b82f6; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.5rem; }
-        .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.5rem 0; border: 1px solid #e2e8f0; border-radius: 2rem; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); font-size: 0.85rem; }
-        .markdown-body th, .markdown-body td { padding: 18px 20px; text-align: left; border-bottom: 1px solid #f1f5f9; }
-        .markdown-body th { background: rgba(59, 130, 246, 0.05); font-weight: 900; text-transform: uppercase; font-size: 0.65rem; color: #3b82f6; letter-spacing: 0.05em; }
-        .markdown-body strong { color: #3b82f6; font-weight: 900; }
+        
+        /* Estilo de Tablas Moderno */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1.5rem 0; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem; background: white; }
+        .markdown-body th, .markdown-body td { padding: 16px 20px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        .markdown-body th { background: #f8fafc; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; color: #3b82f6; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        .markdown-body tr:last-child td { border-bottom: none; }
+        .markdown-body tr:nth-child(even) { background-color: #fafafa; }
+        .markdown-body tr:hover { background-color: rgba(59, 130, 246, 0.03); transition: background 0.2s ease; }
+        .markdown-body strong { color: #3b82f6; font-weight: 950; }
         .markdown-body blockquote { border-left: 6px solid #3b82f6; background: #eff6ff; padding: 1.2rem; margin: 1.5rem 0; border-radius: 0 2rem 2rem 0; font-style: italic; }
         
+        /* Dark Mode Ajustes */
+        .dark .table-responsive { border-color: #334155; }
+        .dark .markdown-body table { background: #0f172a; }
         .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
-        .dark .markdown-body table { border-color: #334155; }
-        .dark .markdown-body th { background: #1e293b; color: #3b82f6; }
-        .dark .markdown-body td { border-bottom-color: #334155; color: #cbd5e1; }
+        .dark .markdown-body th { background: #1e293b; color: #60a5fa; border-bottom-color: #334155; }
+        .dark .markdown-body td { border-bottom-color: #1e293b; color: #cbd5e1; }
+        .dark .markdown-body tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
+        .dark .markdown-body tr:hover { background-color: rgba(96, 165, 250, 0.05); }
         .dark .markdown-body blockquote { background: #1e293b; border-left-color: #3b82f6; color: #cbd5e1; }
       `}</style>
     </div>
