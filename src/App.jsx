@@ -80,6 +80,24 @@ const App = () => {
     try { document.title = "Surtidor AI"; } catch (e) {}
   }, []);
 
+  // --- Lógica de Estandarización de Datos ---
+  const standardizeData = (item) => {
+    let fuel = (item.combustible || '').trim();
+    
+    // Normalización de nombres comerciales a categorías estándar
+    if (/Infinia|V-Power/i.test(fuel)) {
+      fuel = "Nafta Premium y Diesel Premium";
+    } else if (/Súper/i.test(fuel)) {
+      fuel = "Nafta Super";
+    }
+
+    return {
+      ...item,
+      combustible_estandar: fuel,
+      marca: (item.estacion || 'Otros').toUpperCase() // Mapeamos 'estacion' a 'marca' internamente
+    };
+  };
+
   const syncFromSupabase = async () => {
     try {
       const response = await fetch(`${supabaseUrl}/rest/v1/beneficios?select=*`, {
@@ -89,8 +107,12 @@ const App = () => {
       if (data && data.length > 0) {
         const latest = new Date(Math.max(...data.map(i => new Date(i.created_at || Date.now()))));
         setLastUpdateDate(latest.toLocaleDateString('es-AR'));
-        const grouped = data.reduce((acc, item) => {
-          const brand = (item.estacion || 'Otros').toUpperCase();
+        
+        // Procesamos y estandarizamos cada item
+        const processedData = data.map(standardizeData);
+
+        const grouped = processedData.reduce((acc, item) => {
+          const brand = item.marca;
           if (!acc[brand]) acc[brand] = [];
           acc[brand].push(item);
           return acc;
@@ -140,9 +162,18 @@ const App = () => {
   const sortAndFilterBeneficios = (items, fuels) => {
     return items
       .filter(item => {
-        const itemFuel = (item.combustible || '').toLowerCase();
-        // Mostrar si es "todos" o si contiene el combustible seleccionado
-        return itemFuel.includes('todos') || fuels.some(f => itemFuel.includes(f.toLowerCase()));
+        const itemFuel = (item.combustible_estandar || '').toLowerCase();
+        const originalFuel = (item.combustible || '').toLowerCase();
+        
+        // Permitir si el combustible estandarizado coincide, o si el original coincide, o si es "todos"
+        return itemFuel.includes('todos') || 
+               originalFuel.includes('todos') ||
+               fuels.some(f => {
+                 const search = f.toLowerCase();
+                 // Caso especial: Premium busca en el string estandarizado de Premium
+                 if (search.includes('premium') && itemFuel.includes('premium')) return true;
+                 return itemFuel.includes(search) || originalFuel.includes(search);
+               });
       })
       .sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
   };
@@ -152,7 +183,7 @@ const App = () => {
     if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente para esta marca.`;
     
     let md = `# Beneficios ${brand}\n\n`;
-    md += `A continuación se muestran los beneficios vigentes para **${brand}** filtrados por tu selección.\n\n`;
+    md += `A continuación se muestran los beneficios vigentes para la marca **${brand}** filtrados por tu selección.\n\n`;
     
     selectedFuels.forEach(fuel => {
       const sorted = sortAndFilterBeneficios(items, [fuel]);
@@ -174,12 +205,7 @@ const App = () => {
   const generateLocalRanking = (currentFiles = files) => {
     const allItems = [];
     currentFiles.forEach(f => {
-      // Filtrar items por el combustible seleccionado antes de agregar al ranking
-      const fuelFiltered = f.items.filter(item => {
-        const itemFuel = (item.combustible || '').toLowerCase();
-        return itemFuel.includes('todos') || selectedFuels.some(sf => itemFuel.includes(sf.toLowerCase()));
-      });
-
+      const fuelFiltered = sortAndFilterBeneficios(f.items, selectedFuels);
       fuelFiltered.forEach(item => {
         allItems.push({ ...item, brand: f.brand });
       });
@@ -191,9 +217,9 @@ const App = () => {
     
     let md = `# 🏆 Ranking General de Ahorro\n\n`;
     md += `Mejores oportunidades para **${selectedFuels.join(', ')}** en **${selectedLocation}**.\n\n`;
-    md += `| Estación | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
+    md += `| Marca | Banco / App | % Desc. | Tope |\n| :--- | :--- | :--- | :--- |\n`;
     sorted.forEach(i => md += `| **${i.brand}** | ${i.banco} | **${i.descuento}%** | $${i.tope.toLocaleString()} |\n`);
-    md += `\n--- \n\n ### 💡 Resumen por Estación\n`;
+    md += `\n--- \n\n ### 💡 Resumen por Marca\n`;
     BRAND_ORDER.forEach(b => {
         const data = currentFiles.find(f => f.brand === b);
         if (data) {
@@ -210,7 +236,7 @@ const App = () => {
     if (!geminiApiKey) { setAiResponse("⚠️ Configuración pendiente en Netlify."); return; }
     setIsAiConsulting(true);
     setAiResponse(null);
-    // Enviamos el contexto ya filtrado por combustible para que la IA no se confunda
+    
     const filteredContext = files.map(f => {
         const items = sortAndFilterBeneficios(f.items, selectedFuels);
         return `MARCA ${f.brand}:\n${items.map(i => `- ${i.banco}: ${i.descuento}% desc, tope $${i.tope}, el ${i.dia}`).join('\n')}`;
@@ -222,10 +248,11 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `Actúa como un experto en ahorro de combustibles en Argentina. 
-            CONTEXTO: El usuario está buscando para "${selectedFuels.join(', ')}" en "${selectedLocation}".
-            REGLA CRÍTICA: Presenta siempre un resumen escrito seguido de una tabla comparativa. 
-            Ordena por % de ahorro.
-            Datos:\n\n${filteredContext}\n\nConsulta del usuario: "${userPrompt}"` }] }]
+            CONTEXTO: El usuario busca "${selectedFuels.join(', ')}" en "${selectedLocation}".
+            REGLA CRÍTICA: Responde con un breve resumen y una tabla comparativa de beneficios. 
+            USA SIEMPRE LAS MARCAS: YPF, Shell, Axion, Puma, Gulf.
+            Ordena por % de ahorro descendente.
+            Datos estandarizados:\n\n${filteredContext}\n\nConsulta del usuario: "${userPrompt}"` }] }]
         })
       });
       const data = await response.json();
@@ -365,7 +392,7 @@ const App = () => {
                         <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Asistente de Ahorro</h3>
                     </div>
                     <div className="flex flex-col gap-3">
-                        <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder={`Ej: Busco el mejor ahorro para ${selectedFuels[0]}...`} className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm outline-none focus:bg-white/20 transition-all resize-none h-24 text-white placeholder:text-white/30 font-medium" />
+                        <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder={`Ej: ¿Qué promo hay hoy para ${selectedFuels[0]}?`} className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm outline-none focus:bg-white/20 transition-all resize-none h-24 text-white placeholder:text-white/30 font-medium" />
                         <button onClick={handleAiConsult} disabled={isAiConsulting || !userPrompt.trim()} className="w-full bg-white text-blue-600 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-all uppercase tracking-widest text-[11px] disabled:opacity-50 shadow-xl shadow-blue-900/20">
                             {isAiConsulting ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />} Armar Plan Personalizado
                         </button>
