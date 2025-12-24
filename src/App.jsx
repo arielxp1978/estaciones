@@ -65,16 +65,29 @@ const LogoArgentina = () => (
 );
 
 const App = () => {
-  const supabaseUrl = "https://dodhhkrhiuphfwxdekqu.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0";
-  const appPassword = "";
+  // --- Acceso Seguro a Variables de Entorno (Evita errores de import.meta en Canvas) ---
+  const getSafeEnv = (key, fallback) => {
+    try {
+      // Intenta acceder a las variables de Vite/Netlify sin romper el compilador de Canvas
+      const env = window?.process?.env || {};
+      // Usamos una referencia indirecta para evitar que el compilador estático de Canvas falle
+      const viteEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+      return viteEnv[key] || env[key] || fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+
+  const supabaseUrl = getSafeEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = getSafeEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = getSafeEnv('VITE_APP_PASSWORD', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeFileId, setActiveFileId] = useState(null);
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(!appPassword);
+  const [isAuthenticated, setIsAuthenticated] = useState(appPassword === "");
   const [passwordInput, setPasswordInput] = useState('');
   
   // Filtros
@@ -134,10 +147,10 @@ const App = () => {
     syncFromSupabase();
   }, []);
 
-  // --- Lógica de Ranking Automático (Información de Entrada) ---
-  const generateLocalRanking = () => {
+  // --- Lógica de Ranking Local ---
+  const generateLocalRanking = (currentFiles = files) => {
     const allItems = [];
-    files.forEach(f => {
+    currentFiles.forEach(f => {
       f.items.forEach(item => {
         const fuelMatch = (item.combustible || '').toLowerCase().includes('todos') || 
                          selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase()));
@@ -147,7 +160,6 @@ const App = () => {
       });
     });
 
-    // Ordenar por descuento descendente
     const sorted = allItems.sort((a, b) => b.descuento - a.descuento).slice(0, 10);
 
     if (sorted.length === 0) return "### Sin Beneficios\nNo se encontraron beneficios cargados para los filtros seleccionados.";
@@ -162,7 +174,7 @@ const App = () => {
     md += `--- \n\n ### 📊 Resumen por Estación\n`;
     
     BRAND_ORDER.forEach(b => {
-        const brandFile = files.find(f => f.brand === b);
+        const brandFile = currentFiles.find(f => f.brand === b);
         if (brandFile) {
             const best = brandFile.items
                 .filter(item => (item.combustible || '').toLowerCase().includes('todos') || selectedFuels.some(sf => (item.combustible || '').toLowerCase().includes(sf.toLowerCase())))
@@ -176,28 +188,9 @@ const App = () => {
     return md;
   };
 
-  const callGemini = async (prompt, systemInstruction = "") => {
-    if (!apiKey) return null;
-    setIsAiLoading(true);
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          systemInstruction: { parts: [{ text: systemInstruction }] }
-        })
-      });
-      const data = await response.json();
-      setIsAiLoading(false);
-      return data.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) {
-      setIsAiLoading(false);
-      return null;
-    }
-  };
-
   const handleMasterAnalysis = async () => {
+    if (files.length === 0) return;
+    
     setIsAiLoading(true);
     setIsPreCalculated(false);
     
@@ -217,12 +210,8 @@ const App = () => {
       }
     } catch (e) {}
 
-    // 2. Si no hay caché, intentar Gemini si hay API Key, si no usar Ranking Local
-    if (files.length > 0) {
-      const context = files.map(f => `ESTACIÓN: ${f.brand}\n${generateMarkdownContent(f.brand, f.items)}`).join('\n---\n');
-      const res = await callGemini(context, `Genera un ranking de ahorro para ${selectedFuels.join(', ')} en ${selectedLocation}.`);
-      setAiAnalysis(res || generateLocalRanking());
-    }
+    // 2. Fallback: Ranking Local
+    setAiAnalysis(generateLocalRanking());
     setIsAiLoading(false);
   };
 
@@ -230,30 +219,25 @@ const App = () => {
     const file = files.find(f => f.id === activeFileId);
     if (!file) return;
     setIsAiLoading(true);
-    const context = generateMarkdownContent(file.brand, file.items);
-    const res = await callGemini(context, `Analiza los beneficios de ${file.brand}. Resume 3 estrategias clave.`);
-    setBrandAnalysis(res);
+    setBrandAnalysis(null); 
     setIsAiLoading(false);
   };
 
+  // Efecto principal para refrescar el contenido al cambiar filtros o auth
   useEffect(() => {
-    if (files.length > 0 && isAuthenticated) {
+    if (isAuthenticated && files.length > 0) {
       if (!activeFileId) handleMasterAnalysis();
       else handleBrandAnalysis();
     }
   }, [activeFileId, selectedFuels, selectedLocation, files, isAuthenticated]);
 
-  const filterItems = (items, fuels) => {
-    return items.filter(item => {
-      const f = (item.combustible || '').toLowerCase();
-      return f.includes('todos') || fuels.some(sel => f.includes(sel.toLowerCase()));
-    });
-  };
-
   const generateMarkdownContent = (brand, items) => {
     let md = `# Beneficios ${brand}\n\n`;
     selectedFuels.forEach(fuel => {
-      const filtered = filterItems(items, [fuel]);
+      const filtered = items.filter(item => {
+        const f = (item.combustible || '').toLowerCase();
+        return f.includes('todos') || f.includes(fuel.toLowerCase());
+      });
       md += `## Combustible: ${fuel}\n\n`;
       if (filtered.length === 0) {
         md += `> **Sin promociones ni descuentos** para **${fuel}** actualmente.\n\n`;
@@ -278,15 +262,18 @@ const App = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (passwordInput === appPassword) setIsAuthenticated(true);
-    else alert("Contraseña incorrecta");
+    if (passwordInput === appPassword) {
+        setIsAuthenticated(true);
+    } else {
+        alert("Contraseña incorrecta");
+    }
   };
 
-  if (!isAuthenticated && appPassword) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 text-center">
-          <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8">
+          <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8 animate-pulse">
             <Lock className="text-white w-10 h-10" />
           </div>
           <h2 className="text-2xl font-black italic tracking-tighter mb-2 uppercase">Surtidor AI</h2>
@@ -393,7 +380,6 @@ const App = () => {
       {/* CONTENIDO */}
       <main className="max-w-[1200px] mx-auto p-6 flex flex-col gap-6 pb-32">
         
-        {/* Botón Refrescar Análisis */}
         <div className="flex justify-center">
           <button 
             onClick={() => activeFileId ? handleBrandAnalysis() : handleMasterAnalysis()}
@@ -410,19 +396,24 @@ const App = () => {
             {!activeFileId ? (
               <div className="animate-in fade-in duration-500">
                 {isAiLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando oportunidades de ahorro...</p></div>
+                  <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando panorama general...</p></div>
                 ) : aiAnalysis ? (
                   <div className="markdown-body">
                     <div className={`flex items-center gap-4 mb-10 p-6 rounded-3xl border shadow-inner ${isPreCalculated ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-blue-600/5 border-blue-600/10'}`}>
                       {isPreCalculated ? <CloudLightning className="text-emerald-500" size={32} /> : <Trophy className="text-blue-600" size={32} />}
                       <div>
                         <p className={`m-0 text-sm font-black uppercase italic ${isPreCalculated ? 'text-emerald-600' : 'text-blue-600'}`}>{isPreCalculated ? 'Análisis Cloud Optimizado 🚀' : 'Ranking Global en Tiempo Real ✨'}</p>
-                        <p className="m-0 text-[10px] opacity-60 font-medium tracking-tight">Información de entrada generada automáticamente.</p>
+                        <p className="m-0 text-[10px] opacity-60 font-medium tracking-tight">Panorama general generado tras el acceso.</p>
                       </div>
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: marked.parse(aiAnalysis) }} />
                   </div>
-                ) : <div className="text-center py-20 opacity-10 uppercase font-black tracking-widest italic">Cargando beneficios...</div>}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-24 opacity-20 animate-pulse">
+                    <Loader2 size={48} className="animate-spin mb-4" />
+                    <p className="font-black text-[10px] uppercase tracking-widest italic">Cargando datos maestros...</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="animate-in slide-in-from-right-10 duration-500">
@@ -433,12 +424,6 @@ const App = () => {
                       </div>
                       <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none dark:text-white">Beneficios {files.find(f => f.id === activeFileId)?.brand}</h2>
                    </div>
-                   {brandAnalysis && (
-                     <div className="bg-blue-500/5 p-6 rounded-[2rem] border border-blue-500/10 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3 text-blue-600 font-black uppercase text-[10px] tracking-widest"><Sparkles size={16}/> Estrategia IA</div>
-                        <div className="text-sm opacity-80 leading-relaxed" dangerouslySetInnerHTML={{ __html: marked.parse(brandAnalysis) }} />
-                     </div>
-                   )}
                 </div>
                 <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(generateMarkdownContent(files.find(f => f.id === activeFileId).brand, files.find(f => f.id === activeFileId).items)) }} />
               </div>
@@ -454,14 +439,13 @@ const App = () => {
         
         .markdown-body h1 { font-size: 2.5rem; font-weight: 950; color: #3b82f6; margin-bottom: 2rem; font-style: italic; text-transform: uppercase; line-height: 0.9; border:none; letter-spacing: -0.05em; }
         .markdown-body h2 { font-size: 1.6rem; font-weight: 800; margin-top: 2rem; margin-bottom: 1.2rem; color: #3b82f6; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.5rem; }
-        .markdown-body h3 { font-size: 1.2rem; font-weight: 900; margin-top: 1.5rem; margin-bottom: 1rem; color: #3b82f6; text-transform: uppercase; }
         .markdown-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 2rem 0; border: 1px solid #e2e8f0; border-radius: 2rem; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); }
         .markdown-body th, .markdown-body td { padding: 20px 24px; text-align: left; border-bottom: 1px solid #f1f5f9; }
         .markdown-body th { background: rgba(59, 130, 246, 0.05); font-weight: 900; text-transform: uppercase; font-size: 0.7rem; color: #3b82f6; letter-spacing: 0.1em; }
         .markdown-body strong { color: #3b82f6; font-weight: 900; }
         .markdown-body blockquote { border-left: 8px solid #3b82f6; background: #eff6ff; padding: 1.5rem 2rem; margin: 2rem 0; border-radius: 0 2rem 2rem 0; font-style: italic; }
         
-        .dark .markdown-body h1, .dark .markdown-body h2, .dark .markdown-body h3 { color: #60a5fa; }
+        .dark .markdown-body h1, .dark .markdown-body h2 { color: #60a5fa; }
         .dark .markdown-body table { border-color: #334155; }
         .dark .markdown-body th { background: #1e293b; color: #3b82f6; }
         .dark .markdown-body td { border-bottom-color: #334155; color: #cbd5e1; }
