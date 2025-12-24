@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 
-// Configuración de Marked para procesar tablas y saltos de línea
+// Configuración de Marked
 marked.setOptions({ gfm: true, breaks: true });
 
 // --- Mapeo de Logos Oficiales ---
@@ -34,22 +34,22 @@ const LogoSurtidorAI = () => (
 );
 
 const App = () => {
-  // --- Acceso Seguro a Variables (Compatible con Vite y Evita Advertencias) ---
-  const getSafeEnv = (key, fallback = "") => {
+  // --- Acceso Seguro a Variables de Entorno ---
+  // Utilizamos una función para evitar el error de análisis estático en entornos antiguos
+  const getEnvVar = (key, fallback) => {
     try {
-      // @ts-ignore
-      const value = import.meta.env[key];
-      return value || fallback;
+      // Intento de acceso a import.meta.env
+      const env = (import.meta && import.meta.env) ? import.meta.env : {};
+      return env[key] || fallback;
     } catch (e) {
       return fallback;
     }
   };
 
-  const supabaseUrl = getSafeEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
-  const supabaseKey = getSafeEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
-  const appPassword = getSafeEnv('VITE_APP_PASSWORD', "");
-  // CAMBIO DE NOMBRE DE VARIABLE AQUÍ PARA NETLIFY:
-  const geminiApiKey = getSafeEnv('VITE_GEMINI_API_KEY_', "");
+  const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = getEnvVar('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = getEnvVar('VITE_APP_PASSWORD', "");
+  const geminiApiKey = getEnvVar('VITE_GEMINI_API_KEY_', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
@@ -107,7 +107,7 @@ const App = () => {
         setFiles(formatted);
       }
     } catch (err) {
-        console.error("Error sincronizando:", err);
+      console.error("Sync error:", err);
     }
   };
 
@@ -115,11 +115,14 @@ const App = () => {
 
   // --- Ordenamiento: Mayor % primero, luego mayor Tope ---
   const sortBeneficios = (items) => {
-    return [...items].sort((a, b) => (b.descuento - a.descuento) || (b.tope - a.tope));
+    return [...items].sort((a, b) => {
+      if (b.descuento !== a.descuento) return b.descuento - a.descuento;
+      return b.tope - a.tope;
+    });
   };
 
   const generateMarkdownTable = (brand, items) => {
-    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios cargados actualmente.`;
+    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios disponibles actualmente.`;
     
     let md = `# Beneficios ${brand}\n\n`;
     selectedFuels.forEach(fuel => {
@@ -154,7 +157,7 @@ const App = () => {
       });
     });
     const sorted = sortBeneficios(allItems).slice(0, 12);
-    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados en la base.";
+    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados.";
     
     let md = `# 🏆 Panorama General de Ahorro\n\n`;
     md += `Aquí tienes el ranking de las mejores oportunidades para maximizar tu carga hoy.\n\n`;
@@ -175,7 +178,7 @@ const App = () => {
   const handleAiConsult = async () => {
     if (!userPrompt.trim()) return;
     if (!geminiApiKey) {
-        setAiResponse("⚠️ **Clave no configurada:** No se detectó la nueva clave `VITE_GEMINI_API_KEY_`. Por favor, añádela en Netlify y espera a que termine el despliegue.");
+        setAiResponse("⚠️ **Clave no detectada:** Por favor, asegúrate de añadir la variable `VITE_GEMINI_API_KEY_` en Netlify (como Plain Text).");
         return;
     }
     setIsAiConsulting(true);
@@ -194,7 +197,7 @@ const App = () => {
       const data = await response.json();
       setAiResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "No pude procesar la respuesta.");
     } catch (e) {
-      setAiResponse("Hubo un error al conectar con el Asistente IA.");
+      setAiResponse("Hubo un error al conectar con la IA.");
     }
     setIsAiConsulting(false);
   };
@@ -217,7 +220,7 @@ const App = () => {
 
   useEffect(() => {
     if (isAuthenticated && files.length > 0 && !activeFileId) handleMasterAnalysis();
-  }, [isAuthenticated, files, activeFileId]);
+  }, [isAuthenticated, files, activeFileId, selectedFuels]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -251,7 +254,7 @@ const App = () => {
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">{isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}</button>
           </div>
           <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1">
-            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg shadow-blue-600/20' : 'border-transparent opacity-50 hover:opacity-100'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black tracking-widest">Global ✨</span></button>
+            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg' : 'border-transparent opacity-50'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span></button>
             {files.map(f => (
               <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-4 h-10 min-w-[90px] rounded-xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-600/5' : 'border-transparent opacity-40 hover:opacity-100'}`}><img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-6 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" /></button>
             ))}
