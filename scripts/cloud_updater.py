@@ -25,7 +25,8 @@ def parse_markdown_files(directory):
                 
                 for line in lines:
                     # Buscamos líneas que empiecen con | y no sean cabeceras o separadores
-                    if line.startswith("|") and not ("Banco" in line or "---" in line):
+                    # Modificado para no excluir la palabra 'Banco' que es parte de los datos
+                    if line.startswith("|") and not ("| :---" in line or "| Banco o Billetera" in line):
                         cols = [c.strip() for c in line.split("|")]
                         # Estructura: | empty | Banco | Medio | Dia | Fuel | % | Tope | Max | Vigencia | Obs | empty |
                         if len(cols) >= 9:
