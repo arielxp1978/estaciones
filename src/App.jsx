@@ -34,23 +34,22 @@ const LogoSurtidorAI = () => (
 );
 
 const App = () => {
-  // --- Acceso Seguro a Variables de Entorno (Evita advertencias de import.meta en el Canvas) ---
-  const safeGetEnv = (key, fallback) => {
+  // --- Acceso Seguro a Variables (Compatible con Vite y Evita Advertencias) ---
+  const getSafeEnv = (key, fallback = "") => {
     try {
-      // Uso de una referencia indirecta para evitar que el compilador estático falle
-      const env = (window?.process?.env) || {};
       // @ts-ignore
-      const metaEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
-      return metaEnv[key] || env[key] || fallback;
+      const value = import.meta.env[key];
+      return value || fallback;
     } catch (e) {
       return fallback;
     }
   };
 
-  const supabaseUrl = safeGetEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
-  const supabaseKey = safeGetEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
-  const appPassword = safeGetEnv('VITE_APP_PASSWORD', "");
-  const geminiApiKey = safeGetEnv('VITE_GEMINI_API_KEY', "");
+  const supabaseUrl = getSafeEnv('VITE_SUPABASE_URL', "https://dodhhkrhiuphfwxdekqu.supabase.co");
+  const supabaseKey = getSafeEnv('VITE_SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZGhoa3JoaXVwaGZ3eGRla3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTA4NTAsImV4cCI6MjA4MjA4Njg1MH0.u3_zDNLi5vybfH1ueKgbVMg9JlpVoT7SFCcvzS_miN0");
+  const appPassword = getSafeEnv('VITE_APP_PASSWORD', "");
+  // CAMBIO DE NOMBRE DE VARIABLE AQUÍ PARA NETLIFY:
+  const geminiApiKey = getSafeEnv('VITE_GEMINI_API_KEY_', "");
 
   // --- Estados ---
   const [files, setFiles] = useState([]); 
@@ -107,7 +106,9 @@ const App = () => {
         });
         setFiles(formatted);
       }
-    } catch (err) {}
+    } catch (err) {
+        console.error("Error sincronizando:", err);
+    }
   };
 
   useEffect(() => { syncFromSupabase(); }, []);
@@ -118,7 +119,7 @@ const App = () => {
   };
 
   const generateMarkdownTable = (brand, items) => {
-    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios cargados actualmente para esta marca.`;
+    if (!items || items.length === 0) return `# Beneficios ${brand}\n\n> No hay beneficios cargados actualmente.`;
     
     let md = `# Beneficios ${brand}\n\n`;
     selectedFuels.forEach(fuel => {
@@ -131,7 +132,7 @@ const App = () => {
 
       md += `## Combustible: ${fuel}\n\n`;
       if (sorted.length === 0) {
-        md += `> Sin promociones vigentes para **${fuel}** en este momento.\n\n`;
+        md += `> Sin promociones vigentes para **${fuel}**.\n\n`;
       } else {
         md += `| Banco / Billetera | Medio Pago | Día | % Desc. | Tope |\n| :--- | :--- | :--- | :--- | :--- |\n`;
         sorted.forEach(i => {
@@ -153,7 +154,7 @@ const App = () => {
       });
     });
     const sorted = sortBeneficios(allItems).slice(0, 12);
-    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos disponibles para los filtros seleccionados.";
+    if (sorted.length === 0) return "### Sin Beneficios\nNo hay datos cargados en la base.";
     
     let md = `# 🏆 Panorama General de Ahorro\n\n`;
     md += `Aquí tienes el ranking de las mejores oportunidades para maximizar tu carga hoy.\n\n`;
@@ -167,7 +168,6 @@ const App = () => {
             if (top) md += `* En **${b}**, la mejor opción es **${top.banco}** con un **${top.descuento}%** de reintegro.\n`;
         }
     });
-    md += `\n> ✨ **Tip:** Pulsa sobre los logotipos en la parte superior para ver el detalle de cada empresa.`;
     return md;
   };
 
@@ -175,7 +175,7 @@ const App = () => {
   const handleAiConsult = async () => {
     if (!userPrompt.trim()) return;
     if (!geminiApiKey) {
-        setAiResponse("⚠️ **Clave no configurada:** No se detectó la clave de Gemini. Asegúrate de añadir `VITE_GEMINI_API_KEY` en Netlify (como Secret Value) y realizar un despliegue.");
+        setAiResponse("⚠️ **Clave no configurada:** No se detectó la nueva clave `VITE_GEMINI_API_KEY_`. Por favor, añádela en Netlify y espera a que termine el despliegue.");
         return;
     }
     setIsAiConsulting(true);
@@ -188,7 +188,7 @@ const App = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Eres un asesor experto en ahorro de combustible en Argentina. Datos actuales:\n\n${context}\n\nEl usuario dice: "${userPrompt}". Crea un plan de carga optimizado para él indicando días, bancos y estaciones. Responde en Markdown.` }] }]
+          contents: [{ parts: [{ text: `Eres un asesor experto en ahorro de combustible en Argentina. Datos actuales:\n\n${context}\n\nUsuario dice: "${userPrompt}". Crea un plan de carga semanal optimizado para él indicando días, bancos y estaciones. Responde en Markdown.` }] }]
         })
       });
       const data = await response.json();
@@ -207,7 +207,8 @@ const App = () => {
         headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
       });
       const data = await resp.json();
-      setAiAnalysis(data && data.length > 0 ? data[0].contenido : generateLocalRanking());
+      if (data && data.length > 0) setAiAnalysis(data[0].contenido);
+      else setAiAnalysis(generateLocalRanking());
     } catch (e) {
       setAiAnalysis(generateLocalRanking());
     }
@@ -216,7 +217,7 @@ const App = () => {
 
   useEffect(() => {
     if (isAuthenticated && files.length > 0 && !activeFileId) handleMasterAnalysis();
-  }, [isAuthenticated, files, activeFileId, selectedFuels]);
+  }, [isAuthenticated, files, activeFileId]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -226,7 +227,7 @@ const App = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-900">
         <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100 text-center">
           <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8 animate-pulse"><Lock className="text-white w-10 h-10" /></div>
           <h2 className="text-2xl font-black italic tracking-tighter mb-6 uppercase">Surtidor AI</h2>
@@ -250,9 +251,9 @@ const App = () => {
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 rounded-xl hover:bg-slate-500/10 transition-colors">{isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}</button>
           </div>
           <div className="flex justify-center items-center gap-4 overflow-x-auto no-scrollbar py-1">
-            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg' : 'border-transparent opacity-50'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black">Global ✨</span></button>
+            <button onClick={() => setActiveFileId(null)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all shrink-0 ${!activeFileId ? 'border-blue-600 bg-blue-600 text-white font-bold shadow-lg shadow-blue-600/20' : 'border-transparent opacity-50 hover:opacity-100'}`}><Sparkles size={14} /> <span className="text-[10px] uppercase font-black tracking-widest">Global ✨</span></button>
             {files.map(f => (
-              <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-4 h-10 min-w-[90px] rounded-xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-600/5' : 'border-transparent opacity-40'}`}><img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-6 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" /></button>
+              <button key={f.id} onClick={() => setActiveFileId(f.id)} className={`flex items-center justify-center p-2 px-4 h-10 min-w-[90px] rounded-xl border-2 transition-all shrink-0 ${activeFileId === f.id ? 'border-blue-600 bg-blue-600/5' : 'border-transparent opacity-40 hover:opacity-100'}`}><img src={BRAND_LOGOS[f.brand]} alt={f.brand} className="h-6 w-auto object-contain mix-blend-multiply dark:mix-blend-normal" /></button>
             ))}
           </div>
         </div>
@@ -265,9 +266,9 @@ const App = () => {
             <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md"><MessageSquare size={20} /></div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Asistente de Ahorro</h3>
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Asistente de Ahorro</h3>
                 </div>
-                <p className="text-blue-100 text-sm mb-6 leading-relaxed opacity-90">Escribe qué bancos o billeteras virtuales tienes (ej. Santander, Modo, Cuenta DNI) y te daré las mejores opciones.</p>
+                <p className="text-blue-100 text-sm mb-6 leading-relaxed opacity-90 font-medium">Escribe qué bancos, tarjetas o billeteras usas para recomendarte tu mejor plan de ahorro.</p>
                 <div className="flex flex-col gap-3">
                     <textarea 
                         value={userPrompt}
@@ -280,9 +281,9 @@ const App = () => {
                     </button>
                 </div>
                 {aiResponse && (
-                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl shadow-xl prose prose-sm max-w-none">
+                    <div className="mt-8 bg-white/95 text-slate-900 p-6 rounded-3xl animate-in slide-in-from-top-4 duration-500 shadow-xl prose prose-sm max-w-none">
                         <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
-                            <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic">Tu Plan Sugerido ✨</span>
+                            <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest italic leading-none">Plan Sugerido ✨</span>
                             <button onClick={() => setAiResponse(null)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={16}/></button>
                         </div>
                         <div dangerouslySetInnerHTML={{ __html: marked.parse(aiResponse) }} />
@@ -296,14 +297,14 @@ const App = () => {
         <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden min-h-[60vh] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
           <div className="h-full p-8 md:p-14 overflow-y-auto custom-scrollbar">
             {isAiLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando panorama...</p></div>
+              <div className="flex flex-col items-center justify-center py-24 opacity-20"><Loader2 size={48} className="animate-spin mb-4" /><p className="font-black text-[10px] uppercase tracking-widest italic">Calculando...</p></div>
             ) : (
               <div className="markdown-body prose max-w-none dark:prose-invert">
                 <div dangerouslySetInnerHTML={{ 
                     __html: marked.parse(
                         activeBrandData 
                         ? generateMarkdownTable(activeBrandData.brand, activeBrandData.items) 
-                        : aiAnalysis || "Cargando..."
+                        : aiAnalysis || "Cargando beneficios..."
                     ) 
                 }} />
               </div>
