@@ -34,7 +34,7 @@ El sistema recibirá un JSON con la siguiente estructura por cada registro:
 | :--- | :--- | :--- | :--- |
 | `id` | int8 | Identificador único del beneficio. | `125` |
 | `created_at` | timestamp | Fecha/hora en que se cargó el dato. | `2025-12-23T14:00:00Z` |
-| `marca` | text | Petrolera (YPF, Shell, etc.). | `YPF`, `Shell`, `Axion` |
+| `estacion` | text | Marca de la petrolera (YPF, Shell, etc.). | `YPF`, `Shell`, `Axion` |
 | `banco` | text | Entidad que otorga el beneficio. | `Banco Nación`, `Galicia` |
 | `medio_pago` | text | Cómo se debe pagar para obtenerlo. | `MODO QR`, `App YPF` |
 | `dia` | text | Días de vigencia del descuento. | `Lunes`, `Viernes a Domingo` |
@@ -92,7 +92,7 @@ print(f"Se encontraron {len(beneficios)} beneficios.")
 ```json
 [
   {
-    "marca": "Shell",
+    "estacion": "Shell",
     "banco": "Banco Nación",
     "medio_pago": "MODO QR",
     "dia": "Viernes a Domingo",
