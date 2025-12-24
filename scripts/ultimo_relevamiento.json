@@ -31,12 +31,112 @@
     },
     {
         "estacion": "YPF",
+        "banco": "Banco Nación (BNA+)",
+        "medio_pago": "MODO QR (App BNA+)",
+        "dia": "Viernes, Sábado y Domingo",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 5000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Macro / BMA",
+        "medio_pago": "MODO QR (Tarjetas Visa)",
+        "dia": "Miércoles",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Macro / BMA (Selecta)",
+        "medio_pago": "MODO QR (Visa Platinum/Black)",
+        "dia": "Miércoles",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 5000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Macro (Selecta)",
+        "medio_pago": "MODO (App Macro/App YPF)",
+        "dia": "Miércoles",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 25000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Macro (General)",
+        "medio_pago": "MODO (App Macro/App YPF)",
+        "dia": "Miércoles",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 25000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Galicia",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Galicia (Éminent)",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 5000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Comafi",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Comafi (Único)",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 6000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
         "banco": "Santander",
         "medio_pago": "QR App YPF (Tarjeta Visa)",
         "dia": "Jueves",
         "combustible": "Todos",
         "descuento": 15,
         "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "YPF",
+        "banco": "Banco Ciudad",
+        "medio_pago": "MODO QR (App Buepp)",
+        "dia": "Domingos",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 4000,
         "vigencia": "2026-01-31"
     },
     {
@@ -81,6 +181,66 @@
     },
     {
         "estacion": "Shell",
+        "banco": "Banco Nación (BNA+)",
+        "medio_pago": "MODO QR (App BNA+)",
+        "dia": "Viernes a Domingo",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 15000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Banco Galicia",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Banco Galicia (Éminent)",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 5000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Banco Santander",
+        "medio_pago": "MODO QR (Visa)",
+        "dia": "Jueves",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Banco Ciudad",
+        "medio_pago": "MODO QR (App Buepp)",
+        "dia": "Domingos",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 4000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
+        "banco": "Banco Comafi",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Shell",
         "banco": "Jumbo+ / Vea Ahorro",
         "medio_pago": "App Shell Box (Canje)",
         "dia": "Jueves",
@@ -121,6 +281,16 @@
     },
     {
         "estacion": "Axion",
+        "banco": "Banco Nación (BNA+)",
+        "medio_pago": "MODO QR (App BNA+)",
+        "dia": "Viernes a Domingo",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 15000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
         "banco": "BBVA",
         "medio_pago": "MODO QR (App BBVA)",
         "dia": "Viernes y Sábados",
@@ -137,6 +307,26 @@
         "combustible": "Todos",
         "descuento": 30,
         "tope": 9000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "Banco Galicia",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Axion",
+        "banco": "Banco del Sol",
+        "medio_pago": "Tarjeta de Débito",
+        "dia": "Jueves",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 4000,
         "vigencia": "2026-01-31"
     },
     {
@@ -191,6 +381,46 @@
     },
     {
         "estacion": "Puma",
+        "banco": "Banco Nación (BNA+)",
+        "medio_pago": "MODO QR (App BNA+)",
+        "dia": "Viernes a Domingo",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 15000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Banco Galicia",
+        "medio_pago": "MODO QR (Mastercard)",
+        "dia": "Lunes",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Banco Comafi",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3500,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
+        "banco": "Banco Comafi (Único)",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 20,
+        "tope": 6000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Puma",
         "banco": "Puma Pris (Vouchers)",
         "medio_pago": "Canje de Puntos",
         "dia": "Todos los días",
@@ -198,6 +428,46 @@
         "descuento": 0,
         "tope": 20000,
         "vigencia": "2026-01-01"
+    },
+    {
+        "estacion": "Gulf",
+        "banco": "Banco Nación (BNA+)",
+        "medio_pago": "MODO QR (App BNA+)",
+        "dia": "Viernes a Domingo",
+        "combustible": "Todos",
+        "descuento": 30,
+        "tope": 15000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Gulf",
+        "banco": "Banco Ciudad",
+        "medio_pago": "MODO QR (App Buepp)",
+        "dia": "Domingos",
+        "combustible": "Todos",
+        "descuento": 10,
+        "tope": 4000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Gulf",
+        "banco": "Banco Santa Fe",
+        "medio_pago": "Tarjeta de Crédito",
+        "dia": "Miércoles y Jueves",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3000,
+        "vigencia": "2026-01-31"
+    },
+    {
+        "estacion": "Gulf",
+        "banco": "Banco Comafi",
+        "medio_pago": "MODO QR (App Comafi)",
+        "dia": "Sábados",
+        "combustible": "Todos",
+        "descuento": 15,
+        "tope": 3500,
+        "vigencia": "2026-01-31"
     },
     {
         "estacion": "Gulf",
