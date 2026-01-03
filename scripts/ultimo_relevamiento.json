@@ -4,7 +4,7 @@
         "banco": "App YPF (Dinero en Cuenta)",
         "medio_pago": "QR App YPF (Dinero en cuenta)",
         "dia": "Lunes, Sábado y Domingo",
-        "combustible": "Infinia (Nafta/Diesel)",
+        "combustible": "Nafta Premium y Diesel Premium",
         "descuento": 10,
         "tope": 3000,
         "vigencia": "2026-01-31"
@@ -144,7 +144,7 @@
         "banco": "Club La Nación",
         "medio_pago": "QR App YPF",
         "dia": "Todos los días",
-        "combustible": "Infinia (Nafta/Diesel)",
+        "combustible": "Nafta Premium y Diesel Premium",
         "descuento": 10,
         "tope": 3000,
         "vigencia": "2026-12-31"
@@ -174,7 +174,7 @@
         "banco": "Shell Box",
         "medio_pago": "QR App Shell Box",
         "dia": "Miércoles",
-        "combustible": "V-Power (Nafta/Diesel)",
+        "combustible": "Nafta Premium y Diesel Premium",
         "descuento": 10,
         "tope": 3000,
         "vigencia": "2026-01-31"
@@ -244,7 +244,7 @@
         "banco": "Jumbo+ / Vea Ahorro",
         "medio_pago": "App Shell Box (Canje)",
         "dia": "Jueves",
-        "combustible": "V-Power",
+        "combustible": "Nafta Premium y Diesel Premium",
         "descuento": 10,
         "tope": 3000,
         "vigencia": "2026-01-31"
@@ -254,7 +254,7 @@
         "banco": "Tarjeta 365",
         "medio_pago": "QR Shell Box",
         "dia": "De Lunes a Viernes",
-        "combustible": "V-Power (Nafta/Diesel)",
+        "combustible": "Nafta Premium y Diesel Premium",
         "descuento": 5,
         "tope": 2000,
         "vigencia": "2026-01-31"
@@ -364,7 +364,7 @@
         "banco": "Puma Pris (App)",
         "medio_pago": "QR App Puma Pris",
         "dia": "Miércoles",
-        "combustible": "Todos (Súper/Premium/Diesel)",
+        "combustible": "Nafta Súper",
         "descuento": 10,
         "tope": 50,
         "vigencia": "2026-01-31"
@@ -374,7 +374,7 @@
         "banco": "Puma Pris (Verano)",
         "medio_pago": "QR App Puma Pris",
         "dia": "Viernes",
-        "combustible": "Súper",
+        "combustible": "Nafta Súper",
         "descuento": 10,
         "tope": 2500,
         "vigencia": "2026-01-01"
